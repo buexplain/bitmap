@@ -1,0 +1,39 @@
+{
+    "name": "buexplain/bitmap",
+    "description": "基于“github.com/spiral/goridge/v2”给php提供完善的bitmap操作能力",
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "buexplain",
+            "email": "buexplain@163.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "ext-json": "*",
+        "spiral/goridge": "^2.4"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^2.14",
+        "phpunit/phpunit": "^7.0",
+        "swoole/ide-helper": "^4.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "BitMap\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BitMapTest\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/bitmap-win-amd64.exe",
+        "bin/bitmap-linux-amd64.bin"
+    ],
+    "scripts": {
+        "cs-fix": "php-cs-fixer fix ./src",
+        "test": "phpunit --configuration phpunit.xml --colors=always"
+    }
+}

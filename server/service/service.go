@@ -1,0 +1,587 @@
+package service
+
+import (
+	"buexplain/bitmap/objectIDPool"
+	"buexplain/bitmap/objectPool"
+	"errors"
+	"github.com/RoaringBitmap/roaring"
+)
+
+var ErrNotFound error = errors.New("not found bitmap object by id")
+var ErrEmpty error = errors.New("bitmap is empty")
+
+var pool *objectPool.Pool
+
+func init() {
+	pool = objectPool.New()
+}
+
+func GC(connectionID uint32) {
+	pool.GC(objectPool.ConnectionID(connectionID))
+}
+
+type OpIntPayload struct {
+	ID    objectPool.ID `json:"id"`
+	Value uint32        `json:"value"`
+}
+
+type OpManyIntPayload struct {
+	ID    objectPool.ID `json:"id"`
+	Value []uint32      `json:"value"`
+}
+
+type OpStringPayload struct {
+	ID    objectPool.ID `json:"id"`
+	Value string        `json:"value"`
+}
+
+type OpBytesPayload struct {
+	ID    objectPool.ID `json:"id"`
+	Value []byte        `json:"value"`
+}
+
+type OpManyBytesPayload struct {
+	ID    objectPool.ID `json:"id"`
+	Value [][]byte      `json:"value"`
+}
+
+type OpBoolPayload struct {
+	ID    objectPool.ID `json:"id"`
+	Value bool          `json:"value"`
+}
+
+type OpIDPayload struct {
+	CurrentID objectPool.ID `json:"currentID"`
+	TargetID  objectPool.ID `json:"targetID"`
+}
+
+type OpManyIDPayload struct {
+	CurrentID objectPool.ID   `json:"currentID"`
+	TargetID  []objectPool.ID `json:"targetID"`
+}
+
+type Service struct{}
+
+func (s *Service) Ping(msg string, r *string) error {
+	if msg == "ping" {
+		*r = "pong"
+	}
+	return nil
+}
+
+func (s *Service) New(connectionID objectPool.ConnectionID, out *uint32) error {
+	bitmapPool := pool.GetBitmapPool(connectionID)
+	objectID := objectIDPool.Get(uint32(connectionID))
+	bitmapPool.Store(objectPool.ObjectID(objectID), roaring.New())
+	*out = objectID
+	return nil
+}
+
+func (s *Service) Destruct(id objectPool.ID, out *bool) error {
+	if bitmapPool := pool.RGetBitmapPool(id.ConnectionID); bitmapPool != nil {
+		bitmapPool.Delete(id.ObjectID)
+	}
+	*out = true
+	return nil
+}
+
+func (s *Service) GetCardinality(id objectPool.ID, out *uint64) error {
+	if b := pool.GetBitmap(id); b != nil {
+		*out = b.GetCardinality()
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) AndCardinality(payload OpIDPayload, out *uint64) error {
+	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	if bs[0] != nil && bs[1] != nil {
+		*out = bs[0].AndCardinality(bs[1])
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) OrCardinality(payload OpIDPayload, out *uint64) error {
+	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	if bs[0] != nil && bs[1] != nil {
+		*out = bs[0].OrCardinality(bs[1])
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Add(payload OpIntPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		b.Add(payload.Value)
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) CheckedAdd(payload OpIntPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		*out = b.CheckedAdd(payload.Value)
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) AddMany(payload OpManyIntPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		b.AddMany(payload.Value)
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) AddRange(payload OpManyIntPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil && len(payload.Value) == 2 {
+		b.AddRange(uint64(payload.Value[0]), uint64(payload.Value[1]))
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Rank(payload OpIntPayload, out *uint64) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		*out = b.Rank(payload.Value)
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Contains(payload OpIntPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		*out = b.Contains(payload.Value)
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Remove(payload OpIntPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		b.Remove(payload.Value)
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) CheckedRemove(payload OpIntPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		*out = b.CheckedRemove(payload.Value)
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) RemoveMany(payload OpManyIntPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		for _, v := range payload.Value {
+			b.Remove(v)
+		}
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) RemoveRange(payload OpManyIntPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil && len(payload.Value) == 2 {
+		b.RemoveRange(uint64(payload.Value[0]), uint64(payload.Value[1]))
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Flip(payload OpManyIntPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil && len(payload.Value) == 2 {
+		b.Flip(uint64(payload.Value[0]), uint64(payload.Value[1]))
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Clear(id objectPool.ID, out *bool) error {
+	if b := pool.GetBitmap(id); b != nil {
+		b.Clear()
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) IsEmpty(id objectPool.ID, out *bool) error {
+	if b := pool.GetBitmap(id); b != nil {
+		*out = b.IsEmpty()
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Select(payload OpIntPayload, out *int64) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		if result, err := b.Select(payload.Value); err == nil {
+			*out = int64(result)
+		} else {
+			*out = -1
+		}
+		return nil
+	}
+	*out = -1
+	return ErrNotFound
+}
+
+func (s *Service) Minimum(id objectPool.ID, out *uint32) error {
+	if b := pool.GetBitmap(id); b != nil {
+		if b.IsEmpty() {
+			return ErrEmpty
+		}
+		*out = b.Minimum()
+		return nil
+	}
+	*out = 0
+	return ErrNotFound
+}
+
+func (s *Service) Maximum(id objectPool.ID, out *uint32) error {
+	if b := pool.GetBitmap(id); b != nil {
+		if b.IsEmpty() {
+			return ErrEmpty
+		}
+		*out = b.Maximum()
+		return nil
+	}
+	*out = 0
+	return ErrNotFound
+}
+
+func (s *Service) String(id objectPool.ID, out *string) error {
+	if b := pool.GetBitmap(id); b != nil {
+		*out = b.String()
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) ToArray(id objectPool.ID, out *[]uint32) error {
+	if b := pool.GetBitmap(id); b != nil {
+		*out = b.ToArray()
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) ToBase64(id objectPool.ID, out *string) error {
+	if b := pool.GetBitmap(id); b != nil {
+		result, err := b.ToBase64()
+		if err == nil {
+			*out = result
+			return nil
+		}
+		return err
+	}
+	return ErrNotFound
+}
+
+func (s *Service) ToBytes(id objectPool.ID, out *[]byte) error {
+	if b := pool.GetBitmap(id); b != nil {
+		result, err := b.ToBytes()
+		if err == nil {
+			*out = result
+			return nil
+		}
+		return err
+	}
+	return ErrNotFound
+}
+
+func (s *Service) FromBase64(payload OpStringPayload, out *int64) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		n, err := b.FromBase64(payload.Value)
+		if err == nil {
+			*out = n
+			return nil
+		}
+		return err
+	}
+	return ErrNotFound
+}
+
+func (s *Service) FromBuffer(payload OpBytesPayload, out *int64) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		n, err := b.FromBuffer(payload.Value)
+		if err == nil {
+			*out = n
+			return nil
+		}
+		return err
+	}
+	return ErrNotFound
+}
+
+func (s *Service) GetSizeInBytes(id objectPool.ID, out *uint64) error {
+	if b := pool.GetBitmap(id); b != nil {
+		*out = b.GetSizeInBytes()
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) GetSerializedSizeInBytes(id objectPool.ID, out *uint64) error {
+	if b := pool.GetBitmap(id); b != nil {
+		*out = b.GetSerializedSizeInBytes()
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Stats(id objectPool.ID, out *roaring.Statistics) error {
+	if b := pool.GetBitmap(id); b != nil {
+		*out = b.Stats()
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) SetCopyOnWrite(payload OpBoolPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		b.SetCopyOnWrite(payload.Value)
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) GetCopyOnWrite(id objectPool.ID, out *bool) error {
+	if b := pool.GetBitmap(id); b != nil {
+		*out = b.GetCopyOnWrite()
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Clone(id objectPool.ID, out *objectPool.ID) error {
+	bitmapPool := pool.RGetBitmapPool(id.ConnectionID)
+	if bitmapPool == nil {
+		return ErrEmpty
+	}
+	v, ok := bitmapPool.Load(id.ObjectID)
+	if !ok {
+		return ErrEmpty
+	}
+	b := v.(*roaring.Bitmap)
+	if b == nil {
+		return ErrEmpty
+	}
+	objectID := objectPool.ObjectID(objectIDPool.Get(uint32(id.ConnectionID)))
+	bitmapPool.Store(objectID, b.Clone())
+	*out = objectPool.ID{ConnectionID: id.ConnectionID, ObjectID: objectID}
+	return nil
+}
+
+func (s *Service) CloneCopyOnWriteContainers(id objectPool.ID, out *bool) error {
+	if b := pool.GetBitmap(id); b != nil {
+		b.CloneCopyOnWriteContainers()
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) HasRunCompression(id objectPool.ID, out *bool) error {
+	if b := pool.GetBitmap(id); b != nil {
+		*out = b.HasRunCompression()
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) RunOptimize(id objectPool.ID, out *bool) error {
+	if b := pool.GetBitmap(id); b != nil {
+		b.RunOptimize()
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) And(payload OpIDPayload, out *bool) error {
+	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	if bs[0] != nil && bs[1] != nil {
+		bs[0].And(bs[1])
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) AndBuffer(payload OpBytesPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		tmp := roaring.New()
+		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+			b.And(tmp)
+			*out = true
+			return nil
+		} else {
+			return err
+		}
+	}
+	return ErrNotFound
+}
+
+func (s *Service) AndAny(payload OpManyIDPayload, out *bool) error {
+	ids := append([]objectPool.ID{payload.CurrentID}, payload.TargetID...)
+	bs := pool.GetBitmaps(ids)
+	if len(ids) < 2 {
+		return ErrNotFound
+	}
+	bs[0].AndAny(bs[1:]...)
+	*out = true
+	return nil
+}
+
+func (s *Service) AndAnyBuffer(payload OpManyBytesPayload, out *bool) error {
+	b := pool.GetBitmap(payload.ID)
+	if b == nil {
+		return ErrNotFound
+	}
+	bitmaps := make([]*roaring.Bitmap, 0, len(payload.Value))
+	for _, v := range payload.Value {
+		tmp := roaring.New()
+		if _, err := tmp.FromBuffer(v); err == nil {
+			bitmaps = append(bitmaps, tmp)
+		} else {
+			return err
+		}
+	}
+	if len(bitmaps) == 0 {
+		return ErrNotFound
+	}
+	b.AndAny(bitmaps...)
+	*out = true
+	return nil
+
+}
+
+func (s *Service) AndNot(payload OpIDPayload, out *bool) error {
+	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	if bs[0] != nil && bs[1] != nil {
+		bs[0].AndNot(bs[1])
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) AndNotBuffer(payload OpBytesPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		tmp := roaring.New()
+		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+			b.AndNot(tmp)
+			*out = true
+			return nil
+		} else {
+			return err
+		}
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Or(payload OpIDPayload, out *bool) error {
+	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	if bs[0] != nil && bs[1] != nil {
+		bs[0].Or(bs[1])
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) OrBuffer(payload OpBytesPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		tmp := roaring.New()
+		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+			b.Or(tmp)
+			*out = true
+			return nil
+		} else {
+			return err
+		}
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Xor(payload OpIDPayload, out *bool) error {
+	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	if bs[0] != nil && bs[1] != nil {
+		bs[0].Xor(bs[1])
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) XorBuffer(payload OpBytesPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		tmp := roaring.New()
+		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+			b.Xor(tmp)
+			*out = true
+			return nil
+		} else {
+			return err
+		}
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Intersects(payload OpIDPayload, out *bool) error {
+	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	if bs[0] != nil && bs[1] != nil {
+		*out = bs[0].Intersects(bs[1])
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) IntersectsBuffer(payload OpBytesPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		tmp := roaring.New()
+		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+			*out = b.Intersects(tmp)
+			return nil
+		} else {
+			return err
+		}
+	}
+	return ErrNotFound
+}
+
+func (s *Service) Equals(payload OpIDPayload, out *bool) error {
+	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	if bs[0] != nil && bs[1] != nil {
+		*out = bs[0].Equals(bs[1])
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (s *Service) EqualsBuffer(payload OpBytesPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		tmp := roaring.New()
+		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+			*out = b.Equals(tmp)
+			return nil
+		} else {
+			return err
+		}
+	}
+	return ErrNotFound
+}
