@@ -1,6 +1,6 @@
 # php的bitmap操作类
 
-基于 [github.com/spiral/goridge/v2](http://github.com/spiral/goridge/v2) 与 [github.com/spiral/goridge](github.com/spiral/goridge) 给`php`提供完善的`bitmap`操作能力。
+基于 [github.com/spiral/goridge/v2](http://github.com/spiral/goridge) 与 [github.com/spiral/goridge](github.com/spiral/goridge) 给`php`提供完善的`bitmap`操作能力。
 整个软件包分为`go`服务端与`php`客户端，`php`与`go`之间通过`tcp`或者是`unix domain socket`进行通信。
 
 ## 安装
