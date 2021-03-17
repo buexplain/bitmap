@@ -15,7 +15,7 @@ func New() *ConnCloseMonitor {
 	return &ConnCloseMonitor{ConnectionID: connectionIDPool.Get()}
 }
 
-func (this *ConnCloseMonitor) Close() error {
-	service.GC(this.ConnectionID)
-	return this.Codec.Close()
+func (r *ConnCloseMonitor) Close() error {
+	service.GC(r.ConnectionID)
+	return r.Codec.Close()
 }

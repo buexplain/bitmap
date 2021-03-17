@@ -575,4 +575,19 @@ class Client
     {
         return $this->rpc->call('Service.EqualsBuffer', ['id'=>$this->id, 'value'=>base64_encode($bytes)]);
     }
+
+    /**
+     * Iterate iterates over the bitmap, calling the given callback with each value in the bitmap. If the callback returns false, the iteration is halted.
+     * The iteration results are undefined if the bitmap is modified (e.g., with Add or Remove). There is no guarantee as to what order the values will be iterated.
+     * The iteration with side effects, Because each iteration removes the element.
+     * @param int $size
+     * @return int[]
+     */
+    public function iterate(int $size=100): array
+    {
+        if ($size <= 0) {
+            $size = 100;
+        }
+        return $this->rpc->call('Service.Iterate', ['id'=>$this->id, 'value'=>$size]);
+    }
 }

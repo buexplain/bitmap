@@ -791,4 +791,27 @@ class ClientTest extends TestCase
         $clientB->add(4);
         $this->assertFalse($clientA->equalsBuffer($clientB->toBytes()));
     }
+
+    /**
+     * @depends testAdd
+     * @throws Exception
+     */
+    public function testIterate()
+    {
+        $client = ClientFactory::make();
+        for($i=0; $i<100; $i++) {
+            $client->add($i);
+        }
+        $clone = clone $client;
+        $result = [];
+        while (true) {
+            $tmp = $clone->iterate(2);
+            if(count($tmp) == 0) {
+                break;
+            }
+            $result = array_merge($result, $tmp);
+        }
+        $this->assertTrue($clone->getCardinality() == 0);
+        $this->assertTrue($result == $client->toArray());
+    }
 }
