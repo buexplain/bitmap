@@ -599,12 +599,9 @@ func (r *Service) Iterate(payload OpIteratePayload, out *[]uint32) error {
 	}
 	iter := b.ManyIterator()
 	buf := make([]uint32, payload.Value)
-	if size := iter.NextMany(buf); size > 0 {
-		for _, v := range buf {
-			b.Remove(v)
-		}
-	}else {
-		buf = []uint32{}
+	buf = buf[0:iter.NextMany(buf)]
+	if l := len(buf); l > 0 {
+		b.RemoveRange(uint64(buf[0]), uint64(buf[l-1])+1)
 	}
 	*out = buf
 	return nil

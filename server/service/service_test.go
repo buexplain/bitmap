@@ -15,10 +15,11 @@ func TestIterate(t *testing.T)  {
 		t.Error("创建bitmap失败")
 	}
 	id.ObjectID = objectPool.ObjectID(objectID)
-	for i:=0; i<10; i++ {
+	ids := []uint32{0,2,5,3,1,4,6,9,8,7,10,18000000,17,12,180,120,110}
+	for _, v:= range ids{
 		payload := service.OpIntPayload{}
 		payload.ID = id
-		payload.Value = uint32(i)
+		payload.Value = v
 		var out bool
 		if err := s.Add(payload, &out); err != nil {
 			t.Error("添加失败", err)
@@ -26,9 +27,14 @@ func TestIterate(t *testing.T)  {
 	}
 	var out []uint32
 	for {
-		_ = s.Iterate(service.OpIteratePayload{ID: id, Value: 2}, &out)
-		t.Log(out)
+		_ = s.Iterate(service.OpIteratePayload{ID: id, Value: 4}, &out)
+		var counter uint64
+		_ = s.GetCardinality(id, &counter)
+		t.Log(counter, out)
 		if len(out) == 0 {
+			if counter != 0 {
+				t.Error("迭代器未移除已经迭代的数据")
+			}
 			break
 		}
 	}
