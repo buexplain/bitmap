@@ -57,8 +57,9 @@ while ($tmp = $b1->iterate(2)) {
 
 ```bash
 cd server
-go build -ldflags "-s -w" -o ../bin/bitmap-win-amd64.exe main.go
-go build -ldflags "-s -w" -o ../bin/bitmap-linux-amd64.bin main.go
+set GOARCH=amd64&&set set GOOS=windows&& go build -ldflags "-s -w" -o ../bin/bitmap-win-amd64.exe main.go
+set GOARCH=amd64&&set GOOS=linux&&go build -ldflags "-s -w" -o ../bin/bitmap-linux-amd64.bin main.go
+set GOARCH=amd64&&set GOOS=darwin&&go build -ldflags "-s -w" -o ../bin/bitmap-darwin-amd64.bin main.go
 ```
 
 ## License
