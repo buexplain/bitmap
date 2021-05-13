@@ -686,6 +686,39 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
+     * @depends testToArray
+     * @throws Exception
+     */
+    public function testOrAnyBuffer()
+    {
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        //空bitmap
+        $clientA->orAnyBuffer($clientB->toBytes());
+        $this->assertTrue($clientA->toArray() == []);
+
+        //添加了两个元素
+        $clientA->add(1);
+        $clientA->add(2);
+        $this->assertTrue($clientA->toArray() == [1,2]);
+
+        //or了一个bitmap
+        $clientB->add(1);
+        $clientB->add(3);
+        $clientA->orAnyBuffer($clientB->toBytes());
+        $this->assertTrue($clientA->toArray() == [1,2,3]);
+
+        //又or了两个bitmap
+        $clientC = ClientFactory::make();
+        $clientC->add(4);
+        $clientD = ClientFactory::make();
+        $clientD->add(5);
+        $clientA->orAnyBuffer($clientC->toBytes(), $clientD->toBytes());
+        $this->assertTrue($clientA->toArray() == [1,2,3,4,5]);
+    }
+
+    /**
+     * @depends testAdd
      * @throws Exception
      */
     public function testXor()

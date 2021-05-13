@@ -472,7 +472,7 @@ class Client
 
     /**
      * @see andAny
-     * @param array $bytes
+     * @param string ...$bytes
      */
     public function andAnyBuffer(string ...$bytes)
     {
@@ -516,6 +516,18 @@ class Client
     public function orBuffer(string $bytes)
     {
         $this->rpc->call('Service.OrBuffer', ['id'=>$this->id, 'value'=>base64_encode($bytes)]);
+    }
+
+    /**
+     * @see or
+     * @param string ...$bytes
+     */
+    public function OrAnyBuffer(string ...$bytes)
+    {
+        foreach ($bytes as &$v) {
+            $v = base64_encode($v);
+        }
+        $this->rpc->call('Service.OrAnyBuffer', ['id'=>$this->id, 'value'=>$bytes]);
     }
 
     /**
