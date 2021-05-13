@@ -522,7 +522,7 @@ class Client
      * @see or
      * @param string ...$bytes
      */
-    public function OrAnyBuffer(string ...$bytes)
+    public function orAnyBuffer(string ...$bytes)
     {
         foreach ($bytes as &$v) {
             $v = base64_encode($v);
