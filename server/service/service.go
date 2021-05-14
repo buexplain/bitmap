@@ -499,6 +499,23 @@ func (r *Service) AndNotBuffer(payload OpBytesPayload, out *bool) error {
 	return ErrNotFound
 }
 
+func (r *Service) AndNotAnyBuffer(payload OpManyBytesPayload, out *bool) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		tmp := roaring.New()
+		for _, v := range payload.Value {
+			if _, err := tmp.FromBuffer(v); err == nil {
+				b.AndNot(tmp)
+				tmp.Clear()
+			} else {
+				return err
+			}
+		}
+		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
 func (r *Service) Or(payload OpIDPayload, out *bool) error {
 	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {

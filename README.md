@@ -25,31 +25,43 @@ Usage of bin/bitmap-linux-amd64.bin:
 require "vendor/autoload.php";
 
 $b1 = \BitMap\ClientFactory::make();
-//添加一个
-$b1->add(1);
-$b1->add(2);
-var_dump($b1->toArray()); //[1,2]
 $b2 = \BitMap\ClientFactory::make();
-//添加多个
-$b2->addMany([2,3]);
-var_dump($b2->toArray()); //[2,3]
+
 //求并集，并将结果保存到$b1
+$b1->addMany([1, 2]);
+$b2->addMany([2, 3]);
 $b1->or($b2);
-var_dump($b1->toArray()); //[1,2,3]
+print_r($b1->toArray()); //[1,2,3]
+
 //求交集，并将结果保存到$b1
-$b1->and($b2);
-var_dump($b1->toArray()); //[2,3]
-//清空位图
 $b1->clear();
 $b2->clear();
+$b1->addMany([1, 2, 3]);
+$b2->addMany([2, 3, 4]);
+$b1->and($b2);
+print_r($b1->toArray()); //[2,3]
+
 //求差集，并将结果保存到$b1
-$b1->addMany([1,2,3]);
-$b2->addMany([3,4,5]);
+$b1->clear();
+$b2->clear();
+$b1->addMany([1, 2, 3]);
+$b2->addMany([1, 3, 4]);
+$b1->andNot($b2);
+print_r($b1->toArray()); //[2]
+
+//求对称差集，并将结果保存到$b1
+$b1->clear();
+$b2->clear();
+$b1->addMany([1, 2, 3]);
+$b2->addMany([3, 4, 5]);
 $b1->xOr($b2);
-var_dump($b1->toArray()); //[1,2,4,5]
+print_r($b1->toArray()); //[1,2,4,5]
+
 //迭代，每次从$b1中弹出2个元素
+$b1->clear();
+$b1->addMany([1, 2, 3, 4, 5]);
 while ($tmp = $b1->iterate(2)) {
-    var_dump($tmp); // [1,2], [4,5]
+    print_r($tmp); // [1,2], [3,4], [5]
 }
 ```
 

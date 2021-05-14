@@ -651,6 +651,34 @@ class ClientTest extends TestCase
      * @depends testToArray
      * @throws Exception
      */
+    public function testAndNotAnyBuffer()
+    {
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        $clientC = ClientFactory::make();
+        $clientA->add(1);
+        $clientA->add(2);
+        $clientA->add(3);
+        $clientA->add(4);
+        $clientA->add(5);
+
+        $clientB->add(1);
+        $clientB->add(2);
+        $clientB->add(8);
+
+        $clientC->add(4);
+        $clientB->add(8);
+        $clientB->add(9);
+
+        $clientA->andNotAnyBuffer($clientB->toBytes(), $clientC->toBytes());
+        $this->assertTrue($clientA->toArray() == [3, 5]);
+    }
+
+    /**
+     * @depends testAdd
+     * @depends testToArray
+     * @throws Exception
+     */
     public function testOr()
     {
         $clientA = ClientFactory::make();

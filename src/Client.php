@@ -501,6 +501,18 @@ class Client
     }
 
     /**
+     * @see andNot
+     * @param string ...$bytes
+     */
+    public function andNotAnyBuffer(string ...$bytes)
+    {
+        foreach ($bytes as &$v) {
+            $v = base64_encode($v);
+        }
+        $this->rpc->call('Service.AndNotAnyBuffer', ['id'=>$this->id, 'value'=>$bytes]);
+    }
+
+    /**
      * Or computes the union between two bitmaps and stores the result in the current bitmap
      * @param Client $client
      */
