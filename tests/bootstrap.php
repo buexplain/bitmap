@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-use BitMap\RelayFactory;
-use Swoole\Coroutine;
-
 ini_set('display_errors', 'on');
 ini_set('display_startup_errors', 'on');
 
@@ -68,6 +65,9 @@ if(defined('SWOOLE_HOOK_ALL') && class_exists('\Swoole\Process') && class_exists
     for ($n = $maxProcess; $n--;) {
         $status = \Swoole\Process::wait(true);
     }
+
+    //关闭所有hook，因为如果没有 sockets 扩展，则会采用stream socket，此时接下来的测试因为不再协程环境中，则会失败。
+    \Swoole\Runtime::enableCoroutine(false);
 }
 echo 'start test one process and one connect speed'.PHP_EOL;
 $client = \BitMap\ClientFactory::make();

@@ -36,7 +36,7 @@ class StreamSocketRelay implements RelayInterface
         if ($this->connected) {
             return true;
         }
-        $fp = stream_socket_client($this->connection, $errno, $errstr);
+        $fp = stream_socket_client($this->connection, $errno, $errstr, 3);
         if (!$fp) {
             throw new RelayException("unable to establish connection {$this->connection}: [{$errno}]{$errstr}");
         }

@@ -24,10 +24,10 @@ func main() {
 
 	if strings.EqualFold(runtime.GOOS, "linux") {
 		flag.StringVar(&network, "network", "unix", "unix or tcp")
-		flag.StringVar(&address, "address", "/tmp/bitmap-rpc.sock", "/tmp/bitmap-rpc.sock or 127.0.0.1:37101")
+		flag.StringVar(&address, "address", "/run/bitmap-rpc.sock", "/run/bitmap-rpc.sock or 127.0.0.1:37101")
 	} else {
 		flag.StringVar(&network, "network", "tcp", "tcp or unix")
-		flag.StringVar(&address, "address", "127.0.0.1:37101", "127.0.0.1:37101 or /tmp/bitmap-rpc.sock")
+		flag.StringVar(&address, "address", "127.0.0.1:37101", "127.0.0.1:37101 or /run/bitmap-rpc.sock")
 	}
 
 	flag.Parse()
@@ -40,7 +40,7 @@ func main() {
 		panic(err)
 	}
 
-	log.Printf("bitmap rpc service running: %s://%s\n", network, address)
+	log.Printf("bitmap rpc service running: %s://%s pid: %d\n", network, address, os.Getpid())
 
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGHUP)

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace BitMap;
 
 use Spiral\Goridge\Exceptions\RelayException;
+use Swoole\Coroutine;
+use Swoole\Runtime;
 
 class RelayFactory
 {
@@ -13,7 +15,7 @@ class RelayFactory
      */
     protected static $connection = [
         'tcp'=>'tcp://127.0.0.1:37101',
-        'unix'=>'unix:///tmp/bitmap-rpc.sock',
+        'unix'=>'unix:///run/bitmap-rpc.sock',
     ];
 
     public static function make(string $connection=''): Relay
@@ -21,15 +23,31 @@ class RelayFactory
         if ($connection == '') {
             $connection = strtolower(PHP_OS) == 'linux' ? static::$connection['unix'] : static::$connection['tcp'];
         }
-        if (class_exists('\Swoole\Coroutine') && \Swoole\Coroutine::getCid() > 0) {
-            //swoole协程模式下采用可被协程调度的stream_socket_client客户端
+        if(extension_loaded('sockets')) {
+            if(class_exists('\Swoole\Runtime')) {
+                //存在swoole
+                if(Coroutine::getCid() > 0) {
+                    //开了协程
+                    !defined('SWOOLE_HOOK_SOCKETS') && define('SWOOLE_HOOK_SOCKETS', 16384);
+                    if((Runtime::getHookFlags()&SWOOLE_HOOK_SOCKETS) == SWOOLE_HOOK_SOCKETS) {
+                        //hook了sockets扩展
+                        $relay = \Spiral\Goridge\Relay::create($connection);
+                    }else{
+                        $relay = new StreamSocketRelay($connection);
+                    }
+                }else{
+                    //没开协程
+                    $relay = \Spiral\Goridge\Relay::create($connection);
+                }
+            }else{
+                //没有swoole
+                $relay = \Spiral\Goridge\Relay::create($connection);
+            }
+        }else{
             $relay = new StreamSocketRelay($connection);
-        } else {
-            //否则采用 socket_create，避免swoole环境下被hook掉，同时也能兼容fpm环境
-            $relay = \Spiral\Goridge\Relay::create($connection);
         }
         //丢弃头部信息
-        $header = (string) $relay->receiveSync();
+        $relay->receiveSync();
         //读取本次连接的id
         $connectionID = intval($relay->receiveSync());
         if ($connectionID <= 0) {

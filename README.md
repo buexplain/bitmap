@@ -1,7 +1,7 @@
 # php的bitmap操作类
 
 基于 [github.com/RoaringBitmap/roaring](https://pkg.go.dev/github.com/RoaringBitmap/roaring) 与 [github.com/spiral/goridge](https://pkg.go.dev/github.com/spiral/goridge) 给`php`提供完善的`bitmap`操作能力。
-整个软件包分为`go`服务端与`php`客户端，`php`与`go`之间通过`tcp`或者是`unix domain socket`进行通信。
+整个软件包分为`go`服务端与`php`客户端，`php`与`go`之间通过`socket_create(AF_INET, SOCK_STREAM, SOL_TCP)`或者是`socket_create(AF_UNIX, SOCK_STREAM, 0)`或者是`stream_socket_client`进行通信。
 
 ## 安装
 
@@ -12,7 +12,7 @@
 [root@localhost bitmap]# bin/bitmap-linux-amd64.bin -h
 Usage of bin/bitmap-linux-amd64.bin:
   -address string
-    	/tmp/bitmap-rpc.sock or 127.0.0.1:37101 (default "/tmp/bitmap-rpc.sock")
+    	/run/bitmap-rpc.sock or 127.0.0.1:37101 (default "/run/bitmap-rpc.sock")
   -network string
     	unix or tcp (default "unix")
 ```
