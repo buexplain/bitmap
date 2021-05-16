@@ -45,6 +45,11 @@ type OpManyBytesPayload struct {
 	Value [][]byte      `json:"value"`
 }
 
+type OpManyGroupBytesPayload struct {
+	ID    objectPool.ID `json:"id"`
+	Value map[string][][]byte `json:"value"`
+}
+
 type OpBoolPayload struct {
 	ID    objectPool.ID `json:"id"`
 	Value bool          `json:"value"`
@@ -74,11 +79,17 @@ func (r *Service) Ping(msg string, s *string) error {
 	return nil
 }
 
-func (r *Service) New(connectionID objectPool.ConnectionID, out *uint32) error {
+func (r *Service) new(connectionID objectPool.ConnectionID) (objectID objectPool.ObjectID, bitmap *roaring.Bitmap) {
 	bitmapPool := pool.GetBitmapPool(connectionID)
-	objectID := objectIDPool.Get(uint32(connectionID))
-	bitmapPool.Store(objectPool.ObjectID(objectID), roaring.New())
-	*out = objectID
+	objectID = objectPool.ObjectID(objectIDPool.Get(uint32(connectionID)))
+	bitmap = roaring.New()
+	bitmapPool.Store(objectID, bitmap)
+	return
+}
+
+func (r *Service) New(connectionID objectPool.ConnectionID, out *uint32) error {
+	objectID, _ := r.new(connectionID)
+	*out = uint32(objectID)
 	return nil
 }
 
@@ -472,7 +483,6 @@ func (r *Service) AndAnyBuffer(payload OpManyBytesPayload, out *bool) error {
 	b.AndAny(bitmaps...)
 	*out = true
 	return nil
-
 }
 
 func (r *Service) AndNot(payload OpIDPayload, out *bool) error {
@@ -552,6 +562,30 @@ func (r *Service) OrAnyBuffer(payload OpManyBytesPayload, out *bool) error {
 			}
 		}
 		*out = true
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (r *Service) OrAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[string]objectPool.ID) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		result := make(map[string]objectPool.ID)
+		for k, g := range payload.Value {
+			objectID, bitmap := r.new(payload.ID.ConnectionID)
+			id := objectPool.ID{ConnectionID:payload.ID.ConnectionID, ObjectID:objectID}
+			result[k] = id
+			tmp := roaring.New()
+			for _, v := range g {
+				if _, err := tmp.FromBuffer(v); err == nil {
+					bitmap.Or(tmp)
+					tmp.Clear()
+				} else {
+					return err
+				}
+			}
+			b.Or(bitmap)
+		}
+		*out = result
 		return nil
 	}
 	return ErrNotFound

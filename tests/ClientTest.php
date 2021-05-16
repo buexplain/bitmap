@@ -747,6 +747,38 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
+     * @depends testToArray
+     * @throws Exception
+     */
+    public function testOrAnyGroupBuffer()
+    {
+        $clientA = ClientFactory::make();
+        $groupBuffer = [
+            'a'=>[
+                ClientFactory::make()->addMany([1,2,3])->toBytes(),
+                ClientFactory::make()->addMany([2,3])->toBytes(),
+                ClientFactory::make()->addMany([4,5])->toBytes(),
+            ],
+            'b'=>[
+                ClientFactory::make()->addMany([3])->toBytes(),
+                ClientFactory::make()->addMany([2,3])->toBytes(),
+                ClientFactory::make()->addMany([4,5,6])->toBytes(),
+            ],
+        ];
+        $result = $clientA->orAnyGroupBuffer($groupBuffer);
+        foreach ($result as $group=>$client) {
+            if($group == 'a') {
+                $this->assertTrue($client->toArray() == [1,2,3,4,5]);
+            }elseif($group == 'b') {
+                $this->assertTrue($client->toArray() == [2,3,4,5,6]);
+            }
+        }
+        //所有组交集汇总
+        $this->assertTrue($clientA->toArray() == [1,2,3,4,5,6]);
+    }
+
+    /**
+     * @depends testAdd
      * @throws Exception
      */
     public function testXor()

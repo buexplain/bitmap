@@ -24,8 +24,9 @@ Usage of bin/bitmap-linux-amd64.bin:
 
 require "vendor/autoload.php";
 
-$b1 = \BitMap\ClientFactory::make();
-$b2 = \BitMap\ClientFactory::make();
+use BitMap\ClientFactory;
+$b1 = ClientFactory::make();
+$b2 = ClientFactory::make();
 
 //求并集，并将结果保存到$b1
 $b1->addMany([1, 2]);
@@ -34,32 +35,25 @@ $b1->or($b2);
 print_r($b1->toArray()); //[1,2,3]
 
 //求交集，并将结果保存到$b1
-$b1->clear();
-$b2->clear();
-$b1->addMany([1, 2, 3]);
-$b2->addMany([2, 3, 4]);
+$b1->clear()->addMany([1, 2, 3]);
+$b2->clear()->addMany([2, 3, 4]);
 $b1->and($b2);
 print_r($b1->toArray()); //[2,3]
 
 //求差集，并将结果保存到$b1
-$b1->clear();
-$b2->clear();
-$b1->addMany([1, 2, 3]);
-$b2->addMany([1, 3, 4]);
+$b1->clear()->addMany([1, 2, 3]);
+$b2->clear()->addMany([1, 3, 4]);
 $b1->andNot($b2);
 print_r($b1->toArray()); //[2]
 
 //求对称差集，并将结果保存到$b1
-$b1->clear();
-$b2->clear();
-$b1->addMany([1, 2, 3]);
-$b2->addMany([3, 4, 5]);
+$b1->clear()->addMany([1, 2, 3]);
+$b2->clear()->addMany([3, 4, 5]);
 $b1->xOr($b2);
 print_r($b1->toArray()); //[1,2,4,5]
 
 //迭代，每次从$b1中弹出2个元素
-$b1->clear();
-$b1->addMany([1, 2, 3, 4, 5]);
+$b1->clear()->addMany([1, 2, 3, 4, 5]);
 while ($tmp = $b1->iterate(2)) {
     print_r($tmp); // [1,2], [3,4], [5]
 }

@@ -21,10 +21,13 @@ class Client
 
     protected $id = [];
 
-    public function __construct(RPCInterface $rpc)
+    public function __construct(RPCInterface $rpc, array $id=[])
     {
         $this->rpc = $rpc;
-        $this->id = $rpc->getID();
+        if(empty($id)) {
+            $id = $rpc->getID();
+        }
+        $this->id = $id;
     }
 
     /**
@@ -72,13 +75,15 @@ class Client
     /**
      * Add the uint32 x to the bitmap
      * @param int $x
+     * @return $this
      */
-    public function add(int $x)
+    public function add(int $x): self
     {
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
         $this->rpc->call('Service.Add', ['id'=>$this->id, 'value'=>$x]);
+        return $this;
     }
 
     /**
@@ -97,10 +102,12 @@ class Client
     /**
      * AddMany add all of the values in dat
      * @param int[] $x
+     * @return $this
      */
-    public function addMany(array $x)
+    public function addMany(array $x): self
     {
         $this->rpc->call('Service.AddMany', ['id'=>$this->id, 'value'=>$x]);
+        return $this;
     }
 
     /**
@@ -109,13 +116,15 @@ class Client
      * while uint64(0x100000000) cannot be represented as a 32-bit value.
      * @param int $rangeStart
      * @param int $rangeEnd
+     * @return $this
      */
-    public function addRange(int $rangeStart, int $rangeEnd)
+    public function addRange(int $rangeStart, int $rangeEnd): self
     {
         if ($rangeStart < 0 || $rangeEnd < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
         $this->rpc->call('Service.AddRange', ['id'=>$this->id, 'value'=>[$rangeStart, $rangeEnd]]);
+        return $this;
     }
 
     /**
@@ -150,13 +159,15 @@ class Client
     /**
      * Remove the integer x from the bitmap
      * @param int $x
+     * @return $this
      */
-    public function remove(int $x)
+    public function remove(int $x): self
     {
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
         $this->rpc->call('Service.Remove', ['id'=>$this->id, 'value'=>$x]);
+        return $this;
     }
 
     /**
@@ -164,7 +175,7 @@ class Client
      * @param int $x
      * @return bool
      */
-    public function checkedRemove(int $x)
+    public function checkedRemove(int $x): bool
     {
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
@@ -175,10 +186,12 @@ class Client
     /**
      * RemoveMany remove all of the values in dat
      * @param int[] $x
+     * @return $this
      */
-    public function removeMany(array $x)
+    public function removeMany(array $x): self
     {
         $this->rpc->call('Service.RemoveMany', ['id'=>$this->id, 'value'=>$x]);
+        return $this;
     }
 
     /**
@@ -187,13 +200,15 @@ class Client
     *  while uint64(0x100000000) cannot be represented as a 32-bit value.
      * @param int $rangeStart
      * @param int $rangeEnd
+     * @return $this
      */
-    public function removeRange(int $rangeStart, int $rangeEnd)
+    public function removeRange(int $rangeStart, int $rangeEnd): self
     {
         if ($rangeStart < 0 || $rangeEnd < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
         $this->rpc->call('Service.RemoveRange', ['id'=>$this->id, 'value'=>[$rangeStart, $rangeEnd]]);
+        return $this;
     }
 
     /**
@@ -203,22 +218,26 @@ class Client
      * while uint64(0x100000000) cannot be represented as a 32-bit value.
      * @param int $rangeStart
      * @param int $rangeEnd
+     * @return $this
      */
-    public function flip(int $rangeStart, int $rangeEnd)
+    public function flip(int $rangeStart, int $rangeEnd): self
     {
         if ($rangeStart < 0 || $rangeEnd < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
         $this->rpc->call('Service.Flip', ['id'=>$this->id, 'value'=>[$rangeStart, $rangeEnd]]);
+        return $this;
     }
 
     /**
     *  Clear resets the Bitmap to be logically empty, but may retain
     *  some memory allocations that may speed up future operations
+     * @return $this
      */
-    public function clear()
+    public function clear(): self
     {
         $this->rpc->call('Service.Clear', $this->id);
+        return $this;
     }
 
     /**
@@ -378,10 +397,12 @@ class Client
      * (copy-on-write requires extra care in a threaded context).
      * Calling SetCopyOnWrite(true) on a bitmap created with FromBuffer is unsafe.
      * @param bool $x
+     * @return $this
      */
-    public function setCopyOnWrite(bool $x)
+    public function setCopyOnWrite(bool $x): self
     {
         $this->rpc->call('Service.SetCopyOnWrite', ['id'=>$this->id, 'value'=>$x]);
+        return $this;
     }
 
     /**
@@ -413,10 +434,12 @@ class Client
      * CloneCopyOnWriteContainers on all bitmaps that were derived
      * from the 'FromBuffer' bitmap since they map have dependencies
      * on the buf array as well.
+     * @return $this
      */
-    public function cloneCopyOnWriteContainers()
+    public function cloneCopyOnWriteContainers(): self
     {
         $this->rpc->call('Service.CloneCopyOnWriteContainers', $this->id);
+        return $this;
     }
 
     /**
@@ -430,10 +453,12 @@ class Client
 
     /**
      * RunOptimize attempts to further compress the runs of consecutive values found in the bitmap
+     * @return $this
      */
-    public function runOptimize()
+    public function runOptimize(): self
     {
         $this->rpc->call('Service.RunOptimize', $this->id);
+        return $this;
     }
 
     /**
@@ -540,6 +565,29 @@ class Client
             $v = base64_encode($v);
         }
         $this->rpc->call('Service.OrAnyBuffer', ['id'=>$this->id, 'value'=>$bytes]);
+    }
+
+    /**
+     * Or computes the any group bitmaps and stores the result in the current bitmap
+     * @see or
+     * @param array $groupBytes
+     * @example ['group name1'=>[$bytes1, $bytes2, $bytes3], 'group name2'=>[$bytes1, $bytes2, $bytes3]]
+     * @return self[]
+     */
+    public function orAnyGroupBuffer(array $groupBytes): array
+    {
+        foreach ($groupBytes as $group => $bytes) {
+            foreach ($bytes as &$v) {
+                $v = base64_encode($v);
+            }
+            $groupBytes[(string)$group] = $bytes;
+        }
+        $data = $this->rpc->call('Service.OrAnyGroupBuffer', ['id'=>$this->id, 'value'=>$groupBytes]);
+        $result = [];
+        foreach ($data as $group=>$id) {
+            $result[$group] = new Client($this->rpc, $id);
+        }
+        return $result;
     }
 
     /**
