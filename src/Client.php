@@ -591,6 +591,28 @@ class Client
     }
 
     /**
+     * Or computes the any group bitmaps and stores the result in the current bitmap
+     * @see or
+     * @param array $groupBytes
+     * @example ['group name1'=>[$bytes1, $bytes2, $bytes3], 'group name2'=>[$bytes1, $bytes2, $bytes3]]
+     * @return self[]
+     * @example ['total'=>'bitmap getCardinality', 'group name1'=>'bitmap getCardinality', 'group name2'=>'bitmap getCardinality']
+     */
+    public function orCardinalityAnyGroupBuffer(array $groupBytes): array
+    {
+        if(isset($groupBytes['total'])) {
+            throw new InvalidArgumentException('disable setting key: total');
+        }
+        foreach ($groupBytes as $group => $bytes) {
+            foreach ($bytes as &$v) {
+                $v = base64_encode($v);
+            }
+            $groupBytes[(string)$group] = $bytes;
+        }
+        return $this->rpc->call('Service.OrCardinalityAnyGroupBuffer', ['id'=>$this->id, 'value'=>$groupBytes]);
+    }
+
+    /**
      * Xor computes the symmetric difference between two bitmaps and stores the result in the current bitmap
      * @param Client $client
      */

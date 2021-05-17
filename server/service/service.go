@@ -570,11 +570,12 @@ func (r *Service) OrAnyBuffer(payload OpManyBytesPayload, out *bool) error {
 func (r *Service) OrAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[string]objectPool.ID) error {
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		result := make(map[string]objectPool.ID)
+		tmp := roaring.New()
 		for k, g := range payload.Value {
 			objectID, bitmap := r.new(payload.ID.ConnectionID)
 			id := objectPool.ID{ConnectionID:payload.ID.ConnectionID, ObjectID:objectID}
 			result[k] = id
-			tmp := roaring.New()
+			tmp.Clear()
 			for _, v := range g {
 				if _, err := tmp.FromBuffer(v); err == nil {
 					bitmap.Or(tmp)
@@ -585,6 +586,36 @@ func (r *Service) OrAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[str
 			}
 			b.Or(bitmap)
 		}
+		*out = result
+		return nil
+	}
+	return ErrNotFound
+}
+
+func (r *Service) OrCardinalityAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[string]uint64) error {
+	if b := pool.GetBitmap(payload.ID); b != nil {
+		result := make(map[string]uint64)
+		tmp := roaring.New()
+		bitmap := roaring.New()
+		if _, ok := payload.Value["total"]; ok {
+			return errors.New("invalid argument: total")
+		}
+		for k, g := range payload.Value {
+			tmp.Clear()
+			bitmap.Clear()
+			for _, v := range g {
+				if _, err := tmp.FromBuffer(v); err == nil {
+					bitmap.Or(tmp)
+					tmp.Clear()
+				} else {
+					return err
+				}
+			}
+			b.Or(bitmap)
+			result[k] = bitmap.GetCardinality()
+		}
+		//这里写死了这个key，客户端不要占用，否则报错
+		result["total"] = b.GetCardinality()
 		*out = result
 		return nil
 	}
