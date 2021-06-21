@@ -12,7 +12,7 @@
 [root@localhost bitmap]# bin/bitmap-linux-amd64.bin -h
 Usage of bin/bitmap-linux-amd64.bin:
   -address string
-    	/run/bitmap-rpc.sock or 127.0.0.1:37101 (default "/run/bitmap-rpc.sock")
+    	/run/bitmap-rpc.sock or 127.0.0.1:6060 (default "/run/bitmap-rpc.sock")
   -network string
     	unix or tcp (default "unix")
 ```

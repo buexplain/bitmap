@@ -576,6 +576,9 @@ class Client
      */
     public function orAnyGroupBuffer(array $groupBytes): array
     {
+        if(count($groupBytes) == 0) {
+            return [];
+        }
         foreach ($groupBytes as $group => $bytes) {
             foreach ($bytes as &$v) {
                 $v = base64_encode($v);
@@ -595,13 +598,16 @@ class Client
      * @see or
      * @param array $groupBytes
      * @example ['group name1'=>[$bytes1, $bytes2, $bytes3], 'group name2'=>[$bytes1, $bytes2, $bytes3]]
-     * @return self[]
+     * @return int[]
      * @example ['total'=>'bitmap getCardinality', 'group name1'=>'bitmap getCardinality', 'group name2'=>'bitmap getCardinality']
      */
     public function orCardinalityAnyGroupBuffer(array $groupBytes): array
     {
         if(isset($groupBytes['total'])) {
             throw new InvalidArgumentException('disable setting key: total');
+        }
+        if(count($groupBytes) == 0) {
+            return ['total'=>0];
         }
         foreach ($groupBytes as $group => $bytes) {
             foreach ($bytes as &$v) {

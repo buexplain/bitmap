@@ -21,13 +21,18 @@ func main() {
 	}
 
 	var network, address string
-
-	if strings.EqualFold(runtime.GOOS, "linux") {
+	if strings.EqualFold(runtime.GOOS, "linux") || strings.EqualFold(runtime.GOOS, "freebsd")  || strings.EqualFold(runtime.GOOS, "darwin") {
 		flag.StringVar(&network, "network", "unix", "unix or tcp")
-		flag.StringVar(&address, "address", "/run/bitmap-rpc.sock", "/run/bitmap-rpc.sock or 127.0.0.1:37101")
+		var tmp string
+		if fileExists("/run/") {
+			tmp = "/run/bitmap-rpc.sock"
+		}else if fileExists("/var/run/") {
+			tmp = "/run/bitmap-rpc.sock"
+		}
+		flag.StringVar(&address, "address", tmp, tmp+" or 127.0.0.1:6060")
 	} else {
 		flag.StringVar(&network, "network", "tcp", "tcp or unix")
-		flag.StringVar(&address, "address", "127.0.0.1:37101", "127.0.0.1:37101 or /run/bitmap-rpc.sock")
+		flag.StringVar(&address, "address", "127.0.0.1:6060", "127.0.0.1:6060 or /run/bitmap-rpc.sock")
 	}
 
 	flag.Parse()
@@ -70,4 +75,12 @@ func main() {
 			}
 		}()
 	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
 }

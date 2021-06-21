@@ -14,7 +14,7 @@ class RelayFactory
      * @var string[] connection info
      */
     protected static $connection = [
-        'tcp'=>'tcp://127.0.0.1:37101',
+        'tcp'=>'tcp://127.0.0.1:6060',
         'unix'=>'unix:///run/bitmap-rpc.sock',
     ];
 
