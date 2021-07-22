@@ -501,6 +501,9 @@ class Client
      */
     public function andAnyBuffer(string ...$bytes)
     {
+        if(empty($bytes)) {
+            return;
+        }
         foreach ($bytes as &$v) {
             $v = base64_encode($v);
         }
@@ -531,6 +534,9 @@ class Client
      */
     public function andNotAnyBuffer(string ...$bytes)
     {
+        if(empty($bytes)) {
+            return;
+        }
         foreach ($bytes as &$v) {
             $v = base64_encode($v);
         }
@@ -561,6 +567,9 @@ class Client
      */
     public function orAnyBuffer(string ...$bytes)
     {
+        if(empty($bytes)) {
+            return;
+        }
         foreach ($bytes as &$v) {
             $v = base64_encode($v);
         }

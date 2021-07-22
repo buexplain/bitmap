@@ -10,18 +10,18 @@ use Swoole\Runtime;
 
 class RelayFactory
 {
-    /**
-     * @var string[] connection info
-     */
-    protected static $connection = [
-        'tcp'=>'tcp://127.0.0.1:6060',
-        'unix'=>'unix:///run/bitmap-rpc.sock',
-    ];
+    protected static function getConnectionAddress()
+    {
+        if(strtolower(PHP_OS) == 'linux') {
+            return defined('BITMAP_CONNECTION_ADDRESS') ? BITMAP_CONNECTION_ADDRESS : 'unix:///run/bitmap-rpc.sock';
+        }
+        return defined('BITMAP_CONNECTION_ADDRESS') ? BITMAP_CONNECTION_ADDRESS : 'tcp://127.0.0.1:6060';
+    }
 
     public static function make(string $connection=''): Relay
     {
         if ($connection == '') {
-            $connection = strtolower(PHP_OS) == 'linux' ? static::$connection['unix'] : static::$connection['tcp'];
+            $connection = static::getConnectionAddress();
         }
         if(extension_loaded('sockets')) {
             if(class_exists('\Swoole\Runtime')) {

@@ -37,12 +37,12 @@ class ClientFactory
         $this->rpc = new RPC(RelayFactory::make());
     }
 
-    protected function createByProxy()
+    protected function createByProxy(): Client
     {
         return new Client($this->proxy);
     }
 
-    protected function createByRPC()
+    protected function createByRPC(): Client
     {
         return new Client($this->rpc);
     }
