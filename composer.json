@@ -5,13 +5,13 @@
     "authors": [
         {
             "name": "buexplain",
-            "email": "buexplain@163.com"
+            "email": "buexplain@qq.com"
         }
     ],
     "require": {
         "php": ">=7.2",
         "ext-json": "*",
-        "spiral/goridge": "^2.4"
+        "spiral/goridge": "^2.4.5"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^2.14",
@@ -35,5 +35,11 @@
     "scripts": {
         "cs-fix": "php-cs-fixer fix ./src",
         "test": "phpunit --configuration phpunit.xml --colors=always"
+    },
+    "repositories": {
+        "packagist": {
+            "type": "composer",
+            "url": "https://packagist.org"
+        }
     }
 }

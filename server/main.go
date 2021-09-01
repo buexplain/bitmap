@@ -48,16 +48,26 @@ func main() {
 	log.Printf("bitmap rpc service running: %s://%s pid: %d\n", network, address, os.Getpid())
 
 	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGHUP)
+	signal.Notify(signalCh,
+		syscall.SIGHUP,  //hangup
+		syscall.SIGTERM, //terminated
+		syscall.SIGINT,  //interrupt
+		syscall.SIGQUIT, //quit
+	)
 
 	go func(ln net.Listener, signalCh chan os.Signal) {
-		s := <-signalCh
-		if err := ln.Close(); err == nil {
-			log.Printf("Caught signal %s(%d): bitmap rpc service shutting down succeed\n", s, s)
-			os.Exit(0)
-		} else {
-			log.Printf("Caught signal %s(%d): bitmap rpc service shutting down failed %s\n", s, s, err)
-			os.Exit(2)
+		for s := range signalCh {
+			if s == syscall.SIGHUP {
+				//忽略session断开信号
+				continue
+			}
+			if err := ln.Close(); err == nil {
+				log.Printf("Caught signal %s(%d): bitmap rpc service shutting down succeed\n", s, s)
+				os.Exit(0)
+			} else {
+				log.Printf("Caught signal %s(%d): bitmap rpc service shutting down failed %s\n", s, s, err)
+				os.Exit(1)
+			}
 		}
 	}(ln, signalCh)
 

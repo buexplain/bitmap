@@ -7,7 +7,7 @@
 
 1. 引入php包 `composer require buexplain/bitmap`
 2. 根据系统环境执行go服务 `vendor\bin\bitmap-win-amd64.exe.bat` 或者是 `./vendor/bin/bitmap-linux-amd64.bin` 
-
+程序启动help：
 ```text
 [root@localhost bitmap]# bin/bitmap-linux-amd64.bin -h
 Usage of bin/bitmap-linux-amd64.bin:
@@ -57,15 +57,6 @@ $b1->clear()->addMany([1, 2, 3, 4, 5]);
 while ($tmp = $b1->iterate(2)) {
     print_r($tmp); // [1,2], [3,4], [5]
 }
-```
-
-## 手动编译go服务
-
-```bash
-cd server
-set GOARCH=amd64&&set GOOS=windows&&go build -ldflags "-s -w" -o ../bin/bitmap-win-amd64.exe main.go
-set GOARCH=amd64&&set GOOS=linux&&go build -ldflags "-s -w" -o ../bin/bitmap-linux-amd64.bin main.go
-set GOARCH=amd64&&set GOOS=darwin&&go build -ldflags "-s -w" -o ../bin/bitmap-darwin-amd64.bin main.go
 ```
 
 ## License
