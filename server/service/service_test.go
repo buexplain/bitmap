@@ -1,22 +1,22 @@
 package service_test
 
 import (
-	"buexplain/bitmap/objectPool"
+	"buexplain/bitmap/identity"
 	"buexplain/bitmap/service"
 	"testing"
 )
 
-func TestIterate(t *testing.T)  {
-	id := objectPool.ID{}
+func TestIterate(t *testing.T) {
+	id := identity.ID{}
 	id.ConnectionID = 1
 	s := new(service.Service)
 	var objectID uint32
-	if err := s.New(id.ConnectionID, &objectID);err != nil {
+	if err := s.New(id.ConnectionID, &objectID); err != nil {
 		t.Error("创建bitmap失败")
 	}
-	id.ObjectID = objectPool.ObjectID(objectID)
-	ids := []uint32{0,2,5,3,1,4,6,9,8,7,10,18000000,17,12,180,120,110}
-	for _, v:= range ids{
+	id.ObjectID = identity.ObjectID(objectID)
+	ids := []uint32{0, 2, 5, 3, 1, 4, 6, 9, 8, 7, 10, 18000000, 17, 12, 180, 120, 110}
+	for _, v := range ids {
 		payload := service.OpIntPayload{}
 		payload.ID = id
 		payload.Value = v

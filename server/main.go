@@ -1,17 +1,17 @@
 package main
 
 import (
-	"buexplain/bitmap/connCloseMonitor"
+	"buexplain/bitmap/argv"
+	"buexplain/bitmap/connectionGC"
+	"buexplain/bitmap/connectionIDPool"
+	"buexplain/bitmap/identity"
 	"buexplain/bitmap/service"
-	"flag"
 	"github.com/spiral/goridge/v2"
 	"log"
 	"net"
 	"net/rpc"
 	"os"
 	"os/signal"
-	"runtime"
-	"strings"
 	"syscall"
 )
 
@@ -20,32 +20,18 @@ func main() {
 		panic(err)
 	}
 
-	var network, address string
-	if strings.EqualFold(runtime.GOOS, "linux") || strings.EqualFold(runtime.GOOS, "freebsd")  || strings.EqualFold(runtime.GOOS, "darwin") {
-		flag.StringVar(&network, "network", "unix", "unix or tcp")
-		var tmp string
-		if fileExists("/run/") {
-			tmp = "/run/bitmap-rpc.sock"
-		}else if fileExists("/var/run/") {
-			tmp = "/run/bitmap-rpc.sock"
-		}
-		flag.StringVar(&address, "address", tmp, tmp+" or 127.0.0.1:6060")
-	} else {
-		flag.StringVar(&network, "network", "tcp", "tcp or unix")
-		flag.StringVar(&address, "address", "127.0.0.1:6060", "127.0.0.1:6060 or /run/bitmap-rpc.sock")
-	}
-
-	flag.Parse()
-
 	var ln net.Listener
 	var err error
-	ln, err = net.Listen(network, address)
+	ln, err = net.Listen(argv.Network, argv.Address)
 
 	if err != nil {
 		panic(err)
 	}
 
-	log.Printf("bitmap rpc service running: %s://%s pid: %d\n", network, address, os.Getpid())
+	log.Printf(
+		"bitmap rpc service running: %s://%s gcTick: %d reconnectWait: %d pid: %d\n",
+		argv.Network, argv.Address, argv.GCTick, argv.ReconnectWait, os.Getpid(),
+	)
 
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh,
@@ -78,19 +64,46 @@ func main() {
 			continue
 		}
 		go func() {
-			codec := connCloseMonitor.New()
-			codec.Codec = goridge.NewCodec(conn)
-			if err := codec.WriteResponse(emptyResponse, codec.ConnectionID); err == nil {
-				rpc.ServeCodec(codec)
+			//客户端连接id
+			var connectionID identity.ConnectionID = 0
+			codec := goridge.NewCodec(conn)
+			//尝试读取客户端发来的连接id
+			if err := codec.ReadRequestBody(&connectionID); err != nil {
+				log.Println(err)
+				_ = codec.Close()
+				return
 			}
+			if connectionID <= 0 {
+				//客户端第一次连接，从连接id池中分配一个连接id
+				goto alloc
+			}
+			//客户端使用旧连接id重连，从延迟回收队列中移除
+			if connectionGC.Del(connectionID) {
+				//移除成功，连接还未被回收，可以继续使用，重新下发连接id回去
+				err := codec.WriteResponse(emptyResponse, connectionID)
+				if err == nil {
+					rpc.ServeCodec(codec)
+					//连接退出，将连接id加入到延迟回收队列中
+					connectionGC.Add(connectionID)
+					return
+				}
+				log.Println(err)
+				connectionGC.Add(connectionID)
+				_ = codec.Close()
+				return
+			}
+		alloc:
+			connectionID = connectionIDPool.Get()
+			err := codec.WriteResponse(emptyResponse, connectionID)
+			if err == nil {
+				rpc.ServeCodec(codec)
+				//连接退出，将连接id加入到延迟回收队列中
+				connectionGC.Add(connectionID)
+				return
+			}
+			log.Println(err)
+			connectionIDPool.Put(connectionID)
+			_ = codec.Close()
 		}()
 	}
-}
-
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
 }

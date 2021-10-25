@@ -1,20 +1,24 @@
 package connectionIDPool
 
-var idCache chan uint32
+import (
+	"buexplain/bitmap/identity"
+)
+
+var idCache chan identity.ConnectionID
 
 func init() {
-	var i, l uint32
+	var i, l identity.ConnectionID
 	l = 65536
-	idCache = make(chan uint32, l)
+	idCache = make(chan identity.ConnectionID, l)
 	for i = 1; i < l; i++ {
 		idCache <- i
 	}
 }
 
-func Get() uint32 {
+func Get() identity.ConnectionID {
 	return <-idCache
 }
 
-func Put(id uint32) {
+func Put(id identity.ConnectionID) {
 	idCache <- id
 }

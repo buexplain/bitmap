@@ -1,6 +1,7 @@
 package service
 
 import (
+	"buexplain/bitmap/identity"
 	"buexplain/bitmap/objectIDPool"
 	"buexplain/bitmap/objectPool"
 	"errors"
@@ -16,58 +17,58 @@ func init() {
 	pool = objectPool.New()
 }
 
-func GC(connectionID uint32) {
-	pool.GC(objectPool.ConnectionID(connectionID))
+func GC(connectionID identity.ConnectionID) {
+	pool.GC(connectionID)
 }
 
 type OpIntPayload struct {
-	ID    objectPool.ID `json:"id"`
-	Value uint32        `json:"value"`
+	ID    identity.ID `json:"id"`
+	Value uint32      `json:"value"`
 }
 
 type OpManyIntPayload struct {
-	ID    objectPool.ID `json:"id"`
-	Value []uint32      `json:"value"`
+	ID    identity.ID `json:"id"`
+	Value []uint32    `json:"value"`
 }
 
 type OpStringPayload struct {
-	ID    objectPool.ID `json:"id"`
-	Value string        `json:"value"`
+	ID    identity.ID `json:"id"`
+	Value string      `json:"value"`
 }
 
 type OpBytesPayload struct {
-	ID    objectPool.ID `json:"id"`
-	Value []byte        `json:"value"`
+	ID    identity.ID `json:"id"`
+	Value []byte      `json:"value"`
 }
 
 type OpManyBytesPayload struct {
-	ID    objectPool.ID `json:"id"`
-	Value [][]byte      `json:"value"`
+	ID    identity.ID `json:"id"`
+	Value [][]byte    `json:"value"`
 }
 
 type OpManyGroupBytesPayload struct {
-	ID    objectPool.ID `json:"id"`
+	ID    identity.ID         `json:"id"`
 	Value map[string][][]byte `json:"value"`
 }
 
 type OpBoolPayload struct {
-	ID    objectPool.ID `json:"id"`
-	Value bool          `json:"value"`
+	ID    identity.ID `json:"id"`
+	Value bool        `json:"value"`
 }
 
 type OpIDPayload struct {
-	CurrentID objectPool.ID `json:"currentID"`
-	TargetID  objectPool.ID `json:"targetID"`
+	CurrentID identity.ID `json:"currentID"`
+	TargetID  identity.ID `json:"targetID"`
 }
 
 type OpManyIDPayload struct {
-	CurrentID objectPool.ID   `json:"currentID"`
-	TargetID  []objectPool.ID `json:"targetID"`
+	CurrentID identity.ID   `json:"currentID"`
+	TargetID  []identity.ID `json:"targetID"`
 }
 
 type OpIteratePayload struct {
-	ID    objectPool.ID `json:"id"`
-	Value uint32          `json:"value"`
+	ID    identity.ID `json:"id"`
+	Value uint32      `json:"value"`
 }
 
 type Service struct{}
@@ -79,21 +80,22 @@ func (r *Service) Ping(msg string, s *string) error {
 	return nil
 }
 
-func (r *Service) new(connectionID objectPool.ConnectionID) (objectID objectPool.ObjectID, bitmap *roaring.Bitmap) {
+func (r *Service) new(connectionID identity.ConnectionID) (objectID identity.ObjectID, bitmap *roaring.Bitmap) {
 	bitmapPool := pool.GetBitmapPool(connectionID)
-	objectID = objectPool.ObjectID(objectIDPool.Get(uint32(connectionID)))
+	objectID = objectIDPool.Get(connectionID)
 	bitmap = roaring.New()
 	bitmapPool.Store(objectID, bitmap)
 	return
 }
 
-func (r *Service) New(connectionID objectPool.ConnectionID, out *uint32) error {
+func (r *Service) New(connectionID identity.ConnectionID, out *uint32) error {
 	objectID, _ := r.new(connectionID)
 	*out = uint32(objectID)
 	return nil
 }
 
-func (r *Service) Destruct(id objectPool.ID, out *bool) error {
+// Destruct 删除连接id下的具体对象
+func (r *Service) Destruct(id identity.ID, out *bool) error {
 	if bitmapPool := pool.RGetBitmapPool(id.ConnectionID); bitmapPool != nil {
 		bitmapPool.Delete(id.ObjectID)
 	}
@@ -101,7 +103,7 @@ func (r *Service) Destruct(id objectPool.ID, out *bool) error {
 	return nil
 }
 
-func (r *Service) GetCardinality(id objectPool.ID, out *uint64) error {
+func (r *Service) GetCardinality(id identity.ID, out *uint64) error {
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.GetCardinality()
 		return nil
@@ -110,7 +112,7 @@ func (r *Service) GetCardinality(id objectPool.ID, out *uint64) error {
 }
 
 func (r *Service) AndCardinality(payload OpIDPayload, out *uint64) error {
-	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		*out = bs[0].AndCardinality(bs[1])
 		return nil
@@ -119,7 +121,7 @@ func (r *Service) AndCardinality(payload OpIDPayload, out *uint64) error {
 }
 
 func (r *Service) OrCardinality(payload OpIDPayload, out *uint64) error {
-	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		*out = bs[0].OrCardinality(bs[1])
 		return nil
@@ -224,7 +226,7 @@ func (r *Service) Flip(payload OpManyIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Clear(id objectPool.ID, out *bool) error {
+func (r *Service) Clear(id identity.ID, out *bool) error {
 	if b := pool.GetBitmap(id); b != nil {
 		b.Clear()
 		*out = true
@@ -233,7 +235,7 @@ func (r *Service) Clear(id objectPool.ID, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) IsEmpty(id objectPool.ID, out *bool) error {
+func (r *Service) IsEmpty(id identity.ID, out *bool) error {
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.IsEmpty()
 		return nil
@@ -254,7 +256,7 @@ func (r *Service) Select(payload OpIntPayload, out *int64) error {
 	return ErrNotFound
 }
 
-func (r *Service) Minimum(id objectPool.ID, out *uint32) error {
+func (r *Service) Minimum(id identity.ID, out *uint32) error {
 	if b := pool.GetBitmap(id); b != nil {
 		if b.IsEmpty() {
 			return ErrEmpty
@@ -266,7 +268,7 @@ func (r *Service) Minimum(id objectPool.ID, out *uint32) error {
 	return ErrNotFound
 }
 
-func (r *Service) Maximum(id objectPool.ID, out *uint32) error {
+func (r *Service) Maximum(id identity.ID, out *uint32) error {
 	if b := pool.GetBitmap(id); b != nil {
 		if b.IsEmpty() {
 			return ErrEmpty
@@ -278,7 +280,7 @@ func (r *Service) Maximum(id objectPool.ID, out *uint32) error {
 	return ErrNotFound
 }
 
-func (r *Service) String(id objectPool.ID, out *string) error {
+func (r *Service) String(id identity.ID, out *string) error {
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.String()
 		return nil
@@ -286,7 +288,7 @@ func (r *Service) String(id objectPool.ID, out *string) error {
 	return ErrNotFound
 }
 
-func (r *Service) ToArray(id objectPool.ID, out *[]uint32) error {
+func (r *Service) ToArray(id identity.ID, out *[]uint32) error {
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.ToArray()
 		return nil
@@ -294,7 +296,7 @@ func (r *Service) ToArray(id objectPool.ID, out *[]uint32) error {
 	return ErrNotFound
 }
 
-func (r *Service) ToBase64(id objectPool.ID, out *string) error {
+func (r *Service) ToBase64(id identity.ID, out *string) error {
 	if b := pool.GetBitmap(id); b != nil {
 		result, err := b.ToBase64()
 		if err == nil {
@@ -306,7 +308,7 @@ func (r *Service) ToBase64(id objectPool.ID, out *string) error {
 	return ErrNotFound
 }
 
-func (r *Service) ToBytes(id objectPool.ID, out *[]byte) error {
+func (r *Service) ToBytes(id identity.ID, out *[]byte) error {
 	if b := pool.GetBitmap(id); b != nil {
 		result, err := b.ToBytes()
 		if err == nil {
@@ -342,7 +344,7 @@ func (r *Service) FromBuffer(payload OpBytesPayload, out *int64) error {
 	return ErrNotFound
 }
 
-func (r *Service) GetSizeInBytes(id objectPool.ID, out *uint64) error {
+func (r *Service) GetSizeInBytes(id identity.ID, out *uint64) error {
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.GetSizeInBytes()
 		return nil
@@ -350,7 +352,7 @@ func (r *Service) GetSizeInBytes(id objectPool.ID, out *uint64) error {
 	return ErrNotFound
 }
 
-func (r *Service) GetSerializedSizeInBytes(id objectPool.ID, out *uint64) error {
+func (r *Service) GetSerializedSizeInBytes(id identity.ID, out *uint64) error {
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.GetSerializedSizeInBytes()
 		return nil
@@ -358,7 +360,7 @@ func (r *Service) GetSerializedSizeInBytes(id objectPool.ID, out *uint64) error 
 	return ErrNotFound
 }
 
-func (r *Service) Stats(id objectPool.ID, out *roaring.Statistics) error {
+func (r *Service) Stats(id identity.ID, out *roaring.Statistics) error {
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.Stats()
 		return nil
@@ -375,7 +377,7 @@ func (r *Service) SetCopyOnWrite(payload OpBoolPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) GetCopyOnWrite(id objectPool.ID, out *bool) error {
+func (r *Service) GetCopyOnWrite(id identity.ID, out *bool) error {
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.GetCopyOnWrite()
 		return nil
@@ -383,7 +385,7 @@ func (r *Service) GetCopyOnWrite(id objectPool.ID, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Clone(id objectPool.ID, out *objectPool.ID) error {
+func (r *Service) Clone(id identity.ID, out *identity.ID) error {
 	bitmapPool := pool.RGetBitmapPool(id.ConnectionID)
 	if bitmapPool == nil {
 		return ErrEmpty
@@ -396,13 +398,13 @@ func (r *Service) Clone(id objectPool.ID, out *objectPool.ID) error {
 	if b == nil {
 		return ErrEmpty
 	}
-	objectID := objectPool.ObjectID(objectIDPool.Get(uint32(id.ConnectionID)))
+	objectID := objectIDPool.Get(id.ConnectionID)
 	bitmapPool.Store(objectID, b.Clone())
-	*out = objectPool.ID{ConnectionID: id.ConnectionID, ObjectID: objectID}
+	*out = identity.ID{ConnectionID: id.ConnectionID, ObjectID: objectID}
 	return nil
 }
 
-func (r *Service) CloneCopyOnWriteContainers(id objectPool.ID, out *bool) error {
+func (r *Service) CloneCopyOnWriteContainers(id identity.ID, out *bool) error {
 	if b := pool.GetBitmap(id); b != nil {
 		b.CloneCopyOnWriteContainers()
 		*out = true
@@ -411,7 +413,7 @@ func (r *Service) CloneCopyOnWriteContainers(id objectPool.ID, out *bool) error 
 	return ErrNotFound
 }
 
-func (r *Service) HasRunCompression(id objectPool.ID, out *bool) error {
+func (r *Service) HasRunCompression(id identity.ID, out *bool) error {
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.HasRunCompression()
 		return nil
@@ -419,7 +421,7 @@ func (r *Service) HasRunCompression(id objectPool.ID, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) RunOptimize(id objectPool.ID, out *bool) error {
+func (r *Service) RunOptimize(id identity.ID, out *bool) error {
 	if b := pool.GetBitmap(id); b != nil {
 		b.RunOptimize()
 		*out = true
@@ -429,7 +431,7 @@ func (r *Service) RunOptimize(id objectPool.ID, out *bool) error {
 }
 
 func (r *Service) And(payload OpIDPayload, out *bool) error {
-	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		bs[0].And(bs[1])
 		*out = true
@@ -453,7 +455,7 @@ func (r *Service) AndBuffer(payload OpBytesPayload, out *bool) error {
 }
 
 func (r *Service) AndAny(payload OpManyIDPayload, out *bool) error {
-	ids := append([]objectPool.ID{payload.CurrentID}, payload.TargetID...)
+	ids := append([]identity.ID{payload.CurrentID}, payload.TargetID...)
 	bs := pool.GetBitmaps(ids)
 	if len(ids) < 2 {
 		return ErrNotFound
@@ -486,7 +488,7 @@ func (r *Service) AndAnyBuffer(payload OpManyBytesPayload, out *bool) error {
 }
 
 func (r *Service) AndNot(payload OpIDPayload, out *bool) error {
-	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		bs[0].AndNot(bs[1])
 		*out = true
@@ -527,7 +529,7 @@ func (r *Service) AndNotAnyBuffer(payload OpManyBytesPayload, out *bool) error {
 }
 
 func (r *Service) Or(payload OpIDPayload, out *bool) error {
-	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		bs[0].Or(bs[1])
 		*out = true
@@ -567,13 +569,13 @@ func (r *Service) OrAnyBuffer(payload OpManyBytesPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) OrAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[string]objectPool.ID) error {
+func (r *Service) OrAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[string]identity.ID) error {
 	if b := pool.GetBitmap(payload.ID); b != nil {
-		result := make(map[string]objectPool.ID)
+		result := make(map[string]identity.ID)
 		tmp := roaring.New()
 		for k, g := range payload.Value {
 			objectID, bitmap := r.new(payload.ID.ConnectionID)
-			id := objectPool.ID{ConnectionID:payload.ID.ConnectionID, ObjectID:objectID}
+			id := identity.ID{ConnectionID: payload.ID.ConnectionID, ObjectID: objectID}
 			result[k] = id
 			tmp.Clear()
 			for _, v := range g {
@@ -623,7 +625,7 @@ func (r *Service) OrCardinalityAnyGroupBuffer(payload OpManyGroupBytesPayload, o
 }
 
 func (r *Service) Xor(payload OpIDPayload, out *bool) error {
-	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		bs[0].Xor(bs[1])
 		*out = true
@@ -647,7 +649,7 @@ func (r *Service) XorBuffer(payload OpBytesPayload, out *bool) error {
 }
 
 func (r *Service) Intersects(payload OpIDPayload, out *bool) error {
-	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		*out = bs[0].Intersects(bs[1])
 		return nil
@@ -669,7 +671,7 @@ func (r *Service) IntersectsBuffer(payload OpBytesPayload, out *bool) error {
 }
 
 func (r *Service) Equals(payload OpIDPayload, out *bool) error {
-	bs := pool.GetBitmaps([]objectPool.ID{payload.CurrentID, payload.TargetID})
+	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		*out = bs[0].Equals(bs[1])
 		return nil

@@ -33,7 +33,20 @@ class ClientTest extends TestCase
     {
         $client = ClientFactory::make();
         $this->assertTrue($client instanceof Client);
-        $this->assertTrue(!empty($client->getId()));
+        $this->assertTrue(!empty($client->getID()));
+    }
+
+    /**
+     * @depends testRelayFactory
+     */
+    public function testPing()
+    {
+        try {
+            $client = ClientFactory::make();
+            $this->assertTrue($client->ping());
+        }catch (Throwable $throwable) {
+            $this->fail(sprintf('%s in %s on line %d', $throwable->getMessage(), __FILE__, __LINE__));
+        }
     }
 
     /**
@@ -457,7 +470,7 @@ class ClientTest extends TestCase
         $client = ClientFactory::make();
         $result = clone $client;
         $this->assertTrue($result instanceof Client);
-        $this->assertTrue($result->getId() != $client->getId());
+        $this->assertTrue($result->getID() != $client->getID());
         $this->assertTrue($client->toArray() == $result->toArray());
         $client->add(1);
         $client->add(2);

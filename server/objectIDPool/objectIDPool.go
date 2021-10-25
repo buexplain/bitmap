@@ -1,20 +1,21 @@
 package objectIDPool
 
 import (
+	"buexplain/bitmap/identity"
 	"sync/atomic"
 )
 
-var idCounter []uint32
-var l uint32 = 50
+var idCounter []identity.ObjectID
+var l identity.ConnectionID = 64
 
 func init() {
-	idCounter = make([]uint32, l, l)
-	var i uint32
+	idCounter = make([]identity.ObjectID, l, l)
+	var i identity.ConnectionID
 	for i = 0; i < l; i++ {
-		idCounter[int(i)] = 0
+		idCounter[i] = 0
 	}
 }
 
-func Get(connectionID uint32) uint32 {
-	return atomic.AddUint32(&idCounter[connectionID%l], 1)
+func Get(connectionID identity.ConnectionID) identity.ObjectID {
+	return identity.ObjectID(atomic.AddUint32((*uint32)(&idCounter[connectionID%l]), 1))
 }

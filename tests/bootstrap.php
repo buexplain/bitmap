@@ -16,6 +16,41 @@ function getMillisecond() {
 }
 
 require BASE_PATH . '/vendor/autoload.php';
+//
+//\Swoole\Runtime::enableCoroutine(true, SWOOLE_HOOK_ALL);
+//use function Swoole\Coroutine\run;
+//run(function () {
+//    \Swoole\Coroutine::create(function () {
+//
+//        for($i=0;$i<1;$i++) {
+//            $x = \BitMap\ClientFactory::make();
+//            var_dump($x->toArray());
+//        }
+//        Swoole\Coroutine::sleep(10);
+//    });
+//    var_dump(11);
+//});
+//
+//
+//var_dump('112221');
+//sleep(300);exit;
+//
+//try {
+//$x = \BitMap\ClientFactory::make();
+//$x->addMany([1,2,3]);
+//    $c = \BitMap\ClientFactory::make();
+//    $c->add(1);
+//    sleep(4);
+//    echo '写入',PHP_EOL;
+//    $c->add(2);
+//    var_dump($c->toArray());
+//var_dump($x->toArray());
+//
+//}catch (Throwable $throwable) {
+//    die(PHP_EOL.$throwable->getMessage().PHP_EOL);
+//}
+//
+//exit(1);
 
 if(defined('SWOOLE_HOOK_ALL') && class_exists('\Swoole\Process') && class_exists('\Swoole\Coroutine')) {
     echo 'start test multi process and multi coroutine concurrent'.PHP_EOL;
@@ -58,6 +93,8 @@ if(defined('SWOOLE_HOOK_ALL') && class_exists('\Swoole\Process') && class_exists
                 });
             }
             $wg->wait();
+            echo '进程结束'.PHP_EOL;
+            \BitMap\ClientFactory::getInstance()->__destruct();
         },false, 0, true);
         $process->start();
     }

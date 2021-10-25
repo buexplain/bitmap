@@ -19,12 +19,24 @@ class Client
      */
     protected $rpc;
 
-    protected $id = [];
+    /**
+     * 实例id
+     * @var array|int[]
+     */
+    protected $id = [
+        'connectionID' => 0,
+        'objectID' => 0,
+    ];
 
-    public function __construct(RPCInterface $rpc, array $id=[])
+    public function getID(): array
+    {
+        return $this->id;
+    }
+
+    public function __construct(RPCInterface $rpc, array $id = [])
     {
         $this->rpc = $rpc;
-        if(empty($id)) {
+        if (empty($id)) {
             $id = $rpc->getID();
         }
         $this->id = $id;
@@ -35,12 +47,16 @@ class Client
      */
     public function __destruct()
     {
-        $this->rpc->gc($this->id);
+        $this->rpc->call('Service.Destruct', $this->id);
+        $this->rpc = null;
     }
 
-    public function getId(): array
+    /**
+     * @return bool
+     */
+    public function ping()
     {
-        return $this->id;
+        return $this->rpc->call('Service.Ping', 'ping') == 'pong';
     }
 
     /**
@@ -59,7 +75,7 @@ class Client
      */
     public function andCardinality(Client $client): int
     {
-        return $this->rpc->call('Service.AndCardinality', ['currentID'=>$this->id, 'targetID'=>$client->getId()]);
+        return $this->rpc->call('Service.AndCardinality', ['currentID' => $this->id, 'targetID' => $client->getID()]);
     }
 
     /**
@@ -69,7 +85,7 @@ class Client
      */
     public function orCardinality(Client $client): int
     {
-        return $this->rpc->call('Service.OrCardinality', ['currentID'=>$this->id, 'targetID'=>$client->getId()]);
+        return $this->rpc->call('Service.OrCardinality', ['currentID' => $this->id, 'targetID' => $client->getID()]);
     }
 
     /**
@@ -82,7 +98,7 @@ class Client
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        $this->rpc->call('Service.Add', ['id'=>$this->id, 'value'=>$x]);
+        $this->rpc->call('Service.Add', ['id' => $this->id, 'value' => $x]);
         return $this;
     }
 
@@ -96,7 +112,7 @@ class Client
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        return $this->rpc->call('Service.CheckedAdd', ['id'=>$this->id, 'value'=>$x]);
+        return $this->rpc->call('Service.CheckedAdd', ['id' => $this->id, 'value' => $x]);
     }
 
     /**
@@ -106,7 +122,7 @@ class Client
      */
     public function addMany(array $x): self
     {
-        $this->rpc->call('Service.AddMany', ['id'=>$this->id, 'value'=>$x]);
+        $this->rpc->call('Service.AddMany', ['id' => $this->id, 'value' => $x]);
         return $this;
     }
 
@@ -123,7 +139,7 @@ class Client
         if ($rangeStart < 0 || $rangeEnd < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        $this->rpc->call('Service.AddRange', ['id'=>$this->id, 'value'=>[$rangeStart, $rangeEnd]]);
+        $this->rpc->call('Service.AddRange', ['id' => $this->id, 'value' => [$rangeStart, $rangeEnd]]);
         return $this;
     }
 
@@ -140,7 +156,7 @@ class Client
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        return $this->rpc->call('Service.Rank', ['id'=>$this->id, 'value'=>$x]);
+        return $this->rpc->call('Service.Rank', ['id' => $this->id, 'value' => $x]);
     }
 
     /**
@@ -153,7 +169,7 @@ class Client
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        return $this->rpc->call('Service.Contains', ['id'=>$this->id, 'value'=>$x]);
+        return $this->rpc->call('Service.Contains', ['id' => $this->id, 'value' => $x]);
     }
 
     /**
@@ -166,7 +182,7 @@ class Client
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        $this->rpc->call('Service.Remove', ['id'=>$this->id, 'value'=>$x]);
+        $this->rpc->call('Service.Remove', ['id' => $this->id, 'value' => $x]);
         return $this;
     }
 
@@ -180,7 +196,7 @@ class Client
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        return $this->rpc->call('Service.CheckedRemove', ['id'=>$this->id, 'value'=>$x]);
+        return $this->rpc->call('Service.CheckedRemove', ['id' => $this->id, 'value' => $x]);
     }
 
     /**
@@ -190,14 +206,14 @@ class Client
      */
     public function removeMany(array $x): self
     {
-        $this->rpc->call('Service.RemoveMany', ['id'=>$this->id, 'value'=>$x]);
+        $this->rpc->call('Service.RemoveMany', ['id' => $this->id, 'value' => $x]);
         return $this;
     }
 
     /**
-    *  RemoveRange removes the integers in [rangeStart, rangeEnd) from the bitmap.
-    *  The function uses 64-bit parameters even though a Bitmap stores 32-bit values because it is allowed and meaningful to use [0,uint64(0x100000000)) as a range
-    *  while uint64(0x100000000) cannot be represented as a 32-bit value.
+     *  RemoveRange removes the integers in [rangeStart, rangeEnd) from the bitmap.
+     *  The function uses 64-bit parameters even though a Bitmap stores 32-bit values because it is allowed and meaningful to use [0,uint64(0x100000000)) as a range
+     *  while uint64(0x100000000) cannot be represented as a 32-bit value.
      * @param int $rangeStart
      * @param int $rangeEnd
      * @return $this
@@ -207,7 +223,7 @@ class Client
         if ($rangeStart < 0 || $rangeEnd < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        $this->rpc->call('Service.RemoveRange', ['id'=>$this->id, 'value'=>[$rangeStart, $rangeEnd]]);
+        $this->rpc->call('Service.RemoveRange', ['id' => $this->id, 'value' => [$rangeStart, $rangeEnd]]);
         return $this;
     }
 
@@ -225,13 +241,13 @@ class Client
         if ($rangeStart < 0 || $rangeEnd < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        $this->rpc->call('Service.Flip', ['id'=>$this->id, 'value'=>[$rangeStart, $rangeEnd]]);
+        $this->rpc->call('Service.Flip', ['id' => $this->id, 'value' => [$rangeStart, $rangeEnd]]);
         return $this;
     }
 
     /**
-    *  Clear resets the Bitmap to be logically empty, but may retain
-    *  some memory allocations that may speed up future operations
+     *  Clear resets the Bitmap to be logically empty, but may retain
+     *  some memory allocations that may speed up future operations
      * @return $this
      */
     public function clear(): self
@@ -261,7 +277,7 @@ class Client
         if ($position < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        return $this->rpc->call('Service.Select', ['id'=>$this->id, 'value'=>$position]);
+        return $this->rpc->call('Service.Select', ['id' => $this->id, 'value' => $position]);
     }
 
     /**
@@ -326,7 +342,7 @@ class Client
      */
     public function fromBase64(string $b64): int
     {
-        return $this->rpc->call('Service.FromBase64', ['id'=>$this->id, 'value'=>$b64]);
+        return $this->rpc->call('Service.FromBase64', ['id' => $this->id, 'value' => $b64]);
     }
 
     /**
@@ -357,7 +373,7 @@ class Client
      */
     public function fromBuffer(string $bytes): int
     {
-        return $this->rpc->call('Service.FromBuffer', ['id'=>$this->id, 'value'=>base64_encode($bytes)]);
+        return $this->rpc->call('Service.FromBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
     }
 
     /**
@@ -401,7 +417,7 @@ class Client
      */
     public function setCopyOnWrite(bool $x): self
     {
-        $this->rpc->call('Service.SetCopyOnWrite', ['id'=>$this->id, 'value'=>$x]);
+        $this->rpc->call('Service.SetCopyOnWrite', ['id' => $this->id, 'value' => $x]);
         return $this;
     }
 
@@ -467,16 +483,16 @@ class Client
      */
     public function and(Client $client)
     {
-        $this->rpc->call('Service.And', ['currentID'=>$this->id, 'targetID'=>$client->getId()]);
+        $this->rpc->call('Service.And', ['currentID' => $this->id, 'targetID' => $client->getID()]);
     }
 
     /**
-     * @see and
      * @param string $bytes
+     * @see and
      */
     public function andBuffer(string $bytes)
     {
-        $this->rpc->call('Service.AndBuffer', ['id'=>$this->id, 'value'=>base64_encode($bytes)]);
+        $this->rpc->call('Service.AndBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
     }
 
     /**
@@ -488,26 +504,26 @@ class Client
     {
         $ids = [];
         foreach ($clients as $client) {
-            $ids[] = $client->getId();
+            $ids[] = $client->getID();
         }
         if (count($ids) > 0) {
-            $this->rpc->call('Service.AndAny', ['currentID'=>$this->id, 'targetID'=>$ids]);
+            $this->rpc->call('Service.AndAny', ['currentID' => $this->id, 'targetID' => $ids]);
         }
     }
 
     /**
-     * @see andAny
      * @param string ...$bytes
+     * @see andAny
      */
     public function andAnyBuffer(string ...$bytes)
     {
-        if(empty($bytes)) {
+        if (empty($bytes)) {
             return;
         }
         foreach ($bytes as &$v) {
             $v = base64_encode($v);
         }
-        $this->rpc->call('Service.AndAnyBuffer', ['id'=>$this->id, 'value'=>$bytes]);
+        $this->rpc->call('Service.AndAnyBuffer', ['id' => $this->id, 'value' => $bytes]);
     }
 
     /**
@@ -516,31 +532,31 @@ class Client
      */
     public function andNot(Client $client)
     {
-        $this->rpc->call('Service.AndNot', ['currentID'=>$this->id, 'targetID'=>$client->getId()]);
+        $this->rpc->call('Service.AndNot', ['currentID' => $this->id, 'targetID' => $client->getID()]);
     }
 
     /**
-     * @see andNot
      * @param string $bytes
+     * @see andNot
      */
     public function andNotBuffer(string $bytes)
     {
-        $this->rpc->call('Service.AndNotBuffer', ['id'=>$this->id, 'value'=>base64_encode($bytes)]);
+        $this->rpc->call('Service.AndNotBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
     }
 
     /**
-     * @see andNot
      * @param string ...$bytes
+     * @see andNot
      */
     public function andNotAnyBuffer(string ...$bytes)
     {
-        if(empty($bytes)) {
+        if (empty($bytes)) {
             return;
         }
         foreach ($bytes as &$v) {
             $v = base64_encode($v);
         }
-        $this->rpc->call('Service.AndNotAnyBuffer', ['id'=>$this->id, 'value'=>$bytes]);
+        $this->rpc->call('Service.AndNotAnyBuffer', ['id' => $this->id, 'value' => $bytes]);
     }
 
     /**
@@ -549,43 +565,43 @@ class Client
      */
     public function or(Client $client)
     {
-        $this->rpc->call('Service.Or', ['currentID'=>$this->id, 'targetID'=>$client->getId()]);
+        $this->rpc->call('Service.Or', ['currentID' => $this->id, 'targetID' => $client->getID()]);
     }
 
     /**
-     * @see or
      * @param string $bytes
+     * @see or
      */
     public function orBuffer(string $bytes)
     {
-        $this->rpc->call('Service.OrBuffer', ['id'=>$this->id, 'value'=>base64_encode($bytes)]);
+        $this->rpc->call('Service.OrBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
     }
 
     /**
-     * @see or
      * @param string ...$bytes
+     * @see or
      */
     public function orAnyBuffer(string ...$bytes)
     {
-        if(empty($bytes)) {
+        if (empty($bytes)) {
             return;
         }
         foreach ($bytes as &$v) {
             $v = base64_encode($v);
         }
-        $this->rpc->call('Service.OrAnyBuffer', ['id'=>$this->id, 'value'=>$bytes]);
+        $this->rpc->call('Service.OrAnyBuffer', ['id' => $this->id, 'value' => $bytes]);
     }
 
     /**
      * Or computes the any group bitmaps and stores the result in the current bitmap
-     * @see or
      * @param array $groupBytes
-     * @example ['group name1'=>[$bytes1, $bytes2, $bytes3], 'group name2'=>[$bytes1, $bytes2, $bytes3]]
      * @return self[]
+     * @example ['group name1'=>[$bytes1, $bytes2, $bytes3], 'group name2'=>[$bytes1, $bytes2, $bytes3]]
+     * @see or
      */
     public function orAnyGroupBuffer(array $groupBytes): array
     {
-        if(count($groupBytes) == 0) {
+        if (count($groupBytes) == 0) {
             return [];
         }
         foreach ($groupBytes as $group => $bytes) {
@@ -594,9 +610,9 @@ class Client
             }
             $groupBytes[(string)$group] = $bytes;
         }
-        $data = $this->rpc->call('Service.OrAnyGroupBuffer', ['id'=>$this->id, 'value'=>$groupBytes]);
+        $data = $this->rpc->call('Service.OrAnyGroupBuffer', ['id' => $this->id, 'value' => $groupBytes]);
         $result = [];
-        foreach ($data as $group=>$id) {
+        foreach ($data as $group => $id) {
             $result[$group] = new Client($this->rpc, $id);
         }
         return $result;
@@ -604,19 +620,19 @@ class Client
 
     /**
      * Or computes the any group bitmaps and stores the result in the current bitmap
-     * @see or
      * @param array $groupBytes
-     * @example ['group name1'=>[$bytes1, $bytes2, $bytes3], 'group name2'=>[$bytes1, $bytes2, $bytes3]]
      * @return int[]
+     * @example ['group name1'=>[$bytes1, $bytes2, $bytes3], 'group name2'=>[$bytes1, $bytes2, $bytes3]]
+     * @see or
      * @example ['total'=>'bitmap getCardinality', 'group name1'=>'bitmap getCardinality', 'group name2'=>'bitmap getCardinality']
      */
     public function orCardinalityAnyGroupBuffer(array $groupBytes): array
     {
-        if(isset($groupBytes['total'])) {
+        if (isset($groupBytes['total'])) {
             throw new InvalidArgumentException('disable setting key: total');
         }
-        if(count($groupBytes) == 0) {
-            return ['total'=>0];
+        if (count($groupBytes) == 0) {
+            return ['total' => 0];
         }
         foreach ($groupBytes as $group => $bytes) {
             foreach ($bytes as &$v) {
@@ -624,7 +640,7 @@ class Client
             }
             $groupBytes[(string)$group] = $bytes;
         }
-        return $this->rpc->call('Service.OrCardinalityAnyGroupBuffer', ['id'=>$this->id, 'value'=>$groupBytes]);
+        return $this->rpc->call('Service.OrCardinalityAnyGroupBuffer', ['id' => $this->id, 'value' => $groupBytes]);
     }
 
     /**
@@ -633,16 +649,16 @@ class Client
      */
     public function xOr(Client $client)
     {
-        $this->rpc->call('Service.Xor', ['currentID'=>$this->id, 'targetID'=>$client->getId()]);
+        $this->rpc->call('Service.Xor', ['currentID' => $this->id, 'targetID' => $client->getID()]);
     }
 
     /**
-     * @see xOr
      * @param string $bytes
+     * @see xOr
      */
     public function xOrBuffer(string $bytes)
     {
-        $this->rpc->call('Service.XorBuffer', ['id'=>$this->id, 'value'=>base64_encode($bytes)]);
+        $this->rpc->call('Service.XorBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
     }
 
     /**
@@ -652,17 +668,17 @@ class Client
      */
     public function intersects(Client $client): bool
     {
-        return $this->rpc->call('Service.Intersects', ['currentID'=>$this->id, 'targetID'=>$client->getId()]);
+        return $this->rpc->call('Service.Intersects', ['currentID' => $this->id, 'targetID' => $client->getID()]);
     }
 
     /**
-     * @see intersects
      * @param string $bytes
      * @return bool
+     * @see intersects
      */
     public function intersectsBuffer(string $bytes): bool
     {
-        return $this->rpc->call('Service.IntersectsBuffer', ['id'=>$this->id, 'value'=>base64_encode($bytes)]);
+        return $this->rpc->call('Service.IntersectsBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
     }
 
     /**
@@ -672,17 +688,17 @@ class Client
      */
     public function equals(Client $client): bool
     {
-        return $this->rpc->call('Service.Equals', ['currentID'=>$this->id, 'targetID'=>$client->getId()]);
+        return $this->rpc->call('Service.Equals', ['currentID' => $this->id, 'targetID' => $client->getID()]);
     }
 
     /**
-     * @see equals
      * @param string $bytes
      * @return bool
+     * @see equals
      */
     public function equalsBuffer(string $bytes): bool
     {
-        return $this->rpc->call('Service.EqualsBuffer', ['id'=>$this->id, 'value'=>base64_encode($bytes)]);
+        return $this->rpc->call('Service.EqualsBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
     }
 
     /**
@@ -692,11 +708,11 @@ class Client
      * @param int $size
      * @return int[]
      */
-    public function iterate(int $size=100): array
+    public function iterate(int $size = 100): array
     {
         if ($size <= 0) {
             $size = 100;
         }
-        return $this->rpc->call('Service.Iterate', ['id'=>$this->id, 'value'=>$size]);
+        return $this->rpc->call('Service.Iterate', ['id' => $this->id, 'value' => $size]);
     }
 }

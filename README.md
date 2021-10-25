@@ -9,12 +9,16 @@
 2. 根据系统环境执行go服务 `vendor\bin\bitmap-win-amd64.exe.bat` 或者是 `./vendor/bin/bitmap-linux-amd64.bin` 
 程序启动help：
 ```text
-[root@localhost bitmap]# bin/bitmap-linux-amd64.bin -h
-Usage of bin/bitmap-linux-amd64.bin:
-  -address string
+[root@localhost bin]# ./bitmap-linux-amd64.bin -h
+Usage of ./bitmap-linux-amd64.bin:
+  -Address string
     	/run/bitmap-rpc.sock or 127.0.0.1:6060 (default "/run/bitmap-rpc.sock")
-  -network string
+  -Network string
     	unix or tcp (default "unix")
+  -gcTick int
+    	connection gc tick second (default 3)
+  -reconnectWait int
+    	reconnect wait second (default 60)
 ```
 
 ## 示例
