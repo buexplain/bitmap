@@ -11,15 +11,16 @@
 ```text
 [root@localhost bin]# ./bitmap-linux-amd64.bin -h
 Usage of ./bitmap-linux-amd64.bin:
-  -Address string
+  -address string
     	/run/bitmap-rpc.sock or 127.0.0.1:6060 (default "/run/bitmap-rpc.sock")
-  -Network string
+  -network string
     	unix or tcp (default "unix")
   -gcTick int
     	connection gc tick second (default 3)
   -reconnectWait int
     	reconnect wait second (default 60)
 ```
+参数`gcTick`、`reconnectWait`的作用，请阅读 [源码](https://github.com/buexplain/bitmap/blob/main/server/connectionGC/connectionGC.go) 体会。
 
 ## 示例
 
