@@ -22,7 +22,7 @@ func init() {
 			//间隔一定秒数进行连接id的回收
 			tick := time.Tick(time.Second * time.Duration(argv.GCTick))
 			for now := range tick {
-				lock.RLock()
+				lock.Lock()
 				curr := now.Unix()
 				for connectionID, t := range gc {
 					//一定秒数内没有重连则会被回收掉
@@ -31,7 +31,7 @@ func init() {
 						delete(gc, connectionID)
 					}
 				}
-				lock.RUnlock()
+				lock.Unlock()
 			}
 		}()
 	}
