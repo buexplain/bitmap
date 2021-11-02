@@ -7,6 +7,7 @@ namespace BitMap;
 use Spiral\Goridge\Exceptions\PrefixException;
 use Spiral\Goridge\Exceptions\TransportException;
 use Spiral\Goridge\RPC as BaseRPC;
+use ErrorException;
 use Throwable;
 
 class RPC implements RPCInterface
@@ -38,13 +39,23 @@ class RPC implements RPCInterface
     }
 
     /**
+     * @param string $method
+     * @param $payload
+     * @param int $flags
+     * @return mixed|string
      * @throws ReconnectException
+     * @throws ErrorException
      */
     public function call(string $method, $payload, int $flags = 0)
     {
         try {
             return $this->rpc->call($method, $payload, $flags);
-        } catch (TransportException | PrefixException $exception) {
+            //异常 ErrorException 被\socket_send函数抛出，因为高版本的php倾向于抛出异常，此处别被编辑器欺骗了
+        } catch (ErrorException | TransportException | PrefixException $exception) {
+            //服务端断掉了客户端的连接，但是客户端没感应，再次写入数据会抛出异常信息：socket_send(): unable to write to socket [32]: Broken pipe
+            if (!$exception instanceof ErrorException || stripos($exception->getMessage(), 'pipe') == false) {
+                throw $exception;
+            }
             $oldConnectionId = $this->relay->id;
             try {
                 $this->relay->reconnect();
@@ -60,7 +71,7 @@ class RPC implements RPCInterface
     }
 
     /**
-     * @throws ReconnectException
+     * @throws ReconnectException|ErrorException
      */
     public function getID(): array
     {

@@ -54,7 +54,7 @@ class Client
     /**
      * @return bool
      */
-    public function ping()
+    public function ping(): bool
     {
         return $this->rpc->call('Service.Ping', 'ping') == 'pong';
     }
