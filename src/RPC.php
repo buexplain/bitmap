@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BitMap;
 
 use Spiral\Goridge\Exceptions\PrefixException;
+use Spiral\Goridge\Exceptions\ServiceException;
 use Spiral\Goridge\Exceptions\TransportException;
 use Spiral\Goridge\RPC as BaseRPC;
 use ErrorException;
@@ -44,6 +45,7 @@ class RPC implements RPCInterface
      * @param int $flags
      * @return mixed|string
      * @throws ReconnectException
+     * @throws ServiceException
      * @throws ErrorException
      */
     public function call(string $method, $payload, int $flags = 0)
@@ -56,6 +58,7 @@ class RPC implements RPCInterface
             if (!$exception instanceof ErrorException || stripos($exception->getMessage(), 'pipe') == false) {
                 throw $exception;
             }
+            //连接挂了，尝试重连
             $oldConnectionId = $this->relay->id;
             try {
                 $this->relay->reconnect();
