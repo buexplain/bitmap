@@ -5,7 +5,10 @@ import (
 	"buexplain/bitmap/objectIDPool"
 	"buexplain/bitmap/objectPool"
 	"errors"
+	"fmt"
 	"github.com/RoaringBitmap/roaring"
+	"log"
+	"runtime/debug"
 )
 
 var ErrNotFound = errors.New("not found bitmap object by id")
@@ -88,14 +91,34 @@ func (r *Service) new(connectionID identity.ConnectionID) (objectID identity.Obj
 	return
 }
 
-func (r *Service) New(connectionID identity.ConnectionID, out *uint32) error {
+func (r *Service) New(connectionID identity.ConnectionID, out *uint32) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	objectID, _ := r.new(connectionID)
 	*out = uint32(objectID)
 	return nil
 }
 
 // Destruct 删除连接id下的具体对象
-func (r *Service) Destruct(id identity.ID, out *bool) error {
+func (r *Service) Destruct(id identity.ID, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if bitmapPool := pool.RGetBitmapPool(id.ConnectionID); bitmapPool != nil {
 		bitmapPool.Delete(id.ObjectID)
 	}
@@ -103,7 +126,17 @@ func (r *Service) Destruct(id identity.ID, out *bool) error {
 	return nil
 }
 
-func (r *Service) GetCardinality(id identity.ID, out *uint64) error {
+func (r *Service) GetCardinality(id identity.ID, out *uint64) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.GetCardinality()
 		return nil
@@ -111,7 +144,17 @@ func (r *Service) GetCardinality(id identity.ID, out *uint64) error {
 	return ErrNotFound
 }
 
-func (r *Service) AndCardinality(payload OpIDPayload, out *uint64) error {
+func (r *Service) AndCardinality(payload OpIDPayload, out *uint64) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		*out = bs[0].AndCardinality(bs[1])
@@ -120,7 +163,17 @@ func (r *Service) AndCardinality(payload OpIDPayload, out *uint64) error {
 	return ErrNotFound
 }
 
-func (r *Service) OrCardinality(payload OpIDPayload, out *uint64) error {
+func (r *Service) OrCardinality(payload OpIDPayload, out *uint64) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		*out = bs[0].OrCardinality(bs[1])
@@ -129,7 +182,17 @@ func (r *Service) OrCardinality(payload OpIDPayload, out *uint64) error {
 	return ErrNotFound
 }
 
-func (r *Service) Add(payload OpIntPayload, out *bool) error {
+func (r *Service) Add(payload OpIntPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		b.Add(payload.Value)
 		*out = true
@@ -138,7 +201,17 @@ func (r *Service) Add(payload OpIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) CheckedAdd(payload OpIntPayload, out *bool) error {
+func (r *Service) CheckedAdd(payload OpIntPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		*out = b.CheckedAdd(payload.Value)
 		return nil
@@ -146,7 +219,17 @@ func (r *Service) CheckedAdd(payload OpIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) AddMany(payload OpManyIntPayload, out *bool) error {
+func (r *Service) AddMany(payload OpManyIntPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		b.AddMany(payload.Value)
 		*out = true
@@ -155,7 +238,17 @@ func (r *Service) AddMany(payload OpManyIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) AddRange(payload OpManyIntPayload, out *bool) error {
+func (r *Service) AddRange(payload OpManyIntPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil && len(payload.Value) == 2 {
 		b.AddRange(uint64(payload.Value[0]), uint64(payload.Value[1]))
 		*out = true
@@ -164,7 +257,17 @@ func (r *Service) AddRange(payload OpManyIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Rank(payload OpIntPayload, out *uint64) error {
+func (r *Service) Rank(payload OpIntPayload, out *uint64) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		*out = b.Rank(payload.Value)
 		return nil
@@ -172,7 +275,17 @@ func (r *Service) Rank(payload OpIntPayload, out *uint64) error {
 	return ErrNotFound
 }
 
-func (r *Service) Contains(payload OpIntPayload, out *bool) error {
+func (r *Service) Contains(payload OpIntPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		*out = b.Contains(payload.Value)
 		return nil
@@ -180,7 +293,17 @@ func (r *Service) Contains(payload OpIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Remove(payload OpIntPayload, out *bool) error {
+func (r *Service) Remove(payload OpIntPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		b.Remove(payload.Value)
 		*out = true
@@ -189,7 +312,17 @@ func (r *Service) Remove(payload OpIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) CheckedRemove(payload OpIntPayload, out *bool) error {
+func (r *Service) CheckedRemove(payload OpIntPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		*out = b.CheckedRemove(payload.Value)
 		return nil
@@ -197,7 +330,17 @@ func (r *Service) CheckedRemove(payload OpIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) RemoveMany(payload OpManyIntPayload, out *bool) error {
+func (r *Service) RemoveMany(payload OpManyIntPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		for _, v := range payload.Value {
 			b.Remove(v)
@@ -208,7 +351,17 @@ func (r *Service) RemoveMany(payload OpManyIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) RemoveRange(payload OpManyIntPayload, out *bool) error {
+func (r *Service) RemoveRange(payload OpManyIntPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil && len(payload.Value) == 2 {
 		b.RemoveRange(uint64(payload.Value[0]), uint64(payload.Value[1]))
 		*out = true
@@ -217,7 +370,17 @@ func (r *Service) RemoveRange(payload OpManyIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Flip(payload OpManyIntPayload, out *bool) error {
+func (r *Service) Flip(payload OpManyIntPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil && len(payload.Value) == 2 {
 		b.Flip(uint64(payload.Value[0]), uint64(payload.Value[1]))
 		*out = true
@@ -226,7 +389,17 @@ func (r *Service) Flip(payload OpManyIntPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Clear(id identity.ID, out *bool) error {
+func (r *Service) Clear(id identity.ID, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		b.Clear()
 		*out = true
@@ -235,7 +408,17 @@ func (r *Service) Clear(id identity.ID, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) IsEmpty(id identity.ID, out *bool) error {
+func (r *Service) IsEmpty(id identity.ID, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.IsEmpty()
 		return nil
@@ -243,9 +426,20 @@ func (r *Service) IsEmpty(id identity.ID, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Select(payload OpIntPayload, out *int64) error {
+func (r *Service) Select(payload OpIntPayload, out *int64) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
-		if result, err := b.Select(payload.Value); err == nil {
+		var result uint32
+		if result, err = b.Select(payload.Value); err == nil {
 			*out = int64(result)
 		} else {
 			*out = -1
@@ -256,7 +450,17 @@ func (r *Service) Select(payload OpIntPayload, out *int64) error {
 	return ErrNotFound
 }
 
-func (r *Service) Minimum(id identity.ID, out *uint32) error {
+func (r *Service) Minimum(id identity.ID, out *uint32) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		if b.IsEmpty() {
 			return ErrEmpty
@@ -268,7 +472,17 @@ func (r *Service) Minimum(id identity.ID, out *uint32) error {
 	return ErrNotFound
 }
 
-func (r *Service) Maximum(id identity.ID, out *uint32) error {
+func (r *Service) Maximum(id identity.ID, out *uint32) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		if b.IsEmpty() {
 			return ErrEmpty
@@ -280,7 +494,17 @@ func (r *Service) Maximum(id identity.ID, out *uint32) error {
 	return ErrNotFound
 }
 
-func (r *Service) String(id identity.ID, out *string) error {
+func (r *Service) String(id identity.ID, out *string) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.String()
 		return nil
@@ -288,7 +512,17 @@ func (r *Service) String(id identity.ID, out *string) error {
 	return ErrNotFound
 }
 
-func (r *Service) ToArray(id identity.ID, out *[]uint32) error {
+func (r *Service) ToArray(id identity.ID, out *[]uint32) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.ToArray()
 		return nil
@@ -296,9 +530,20 @@ func (r *Service) ToArray(id identity.ID, out *[]uint32) error {
 	return ErrNotFound
 }
 
-func (r *Service) ToBase64(id identity.ID, out *string) error {
+func (r *Service) ToBase64(id identity.ID, out *string) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
-		result, err := b.ToBase64()
+		var result string
+		result, err = b.ToBase64()
 		if err == nil {
 			*out = result
 			return nil
@@ -308,9 +553,20 @@ func (r *Service) ToBase64(id identity.ID, out *string) error {
 	return ErrNotFound
 }
 
-func (r *Service) ToBytes(id identity.ID, out *[]byte) error {
+func (r *Service) ToBytes(id identity.ID, out *[]byte) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
-		result, err := b.ToBytes()
+		var result []byte
+		result, err = b.ToBytes()
 		if err == nil {
 			*out = result
 			return nil
@@ -320,9 +576,20 @@ func (r *Service) ToBytes(id identity.ID, out *[]byte) error {
 	return ErrNotFound
 }
 
-func (r *Service) FromBase64(payload OpStringPayload, out *int64) error {
+func (r *Service) FromBase64(payload OpStringPayload, out *int64) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
-		n, err := b.FromBase64(payload.Value)
+		var n int64
+		n, err = b.FromBase64(payload.Value)
 		if err == nil {
 			*out = n
 			return nil
@@ -332,9 +599,20 @@ func (r *Service) FromBase64(payload OpStringPayload, out *int64) error {
 	return ErrNotFound
 }
 
-func (r *Service) FromBuffer(payload OpBytesPayload, out *int64) error {
+func (r *Service) FromBuffer(payload OpBytesPayload, out *int64) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
-		n, err := b.FromBuffer(payload.Value)
+		var n int64
+		n, err = b.FromBuffer(payload.Value)
 		if err == nil {
 			*out = n
 			return nil
@@ -344,7 +622,17 @@ func (r *Service) FromBuffer(payload OpBytesPayload, out *int64) error {
 	return ErrNotFound
 }
 
-func (r *Service) GetSizeInBytes(id identity.ID, out *uint64) error {
+func (r *Service) GetSizeInBytes(id identity.ID, out *uint64) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.GetSizeInBytes()
 		return nil
@@ -352,7 +640,17 @@ func (r *Service) GetSizeInBytes(id identity.ID, out *uint64) error {
 	return ErrNotFound
 }
 
-func (r *Service) GetSerializedSizeInBytes(id identity.ID, out *uint64) error {
+func (r *Service) GetSerializedSizeInBytes(id identity.ID, out *uint64) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.GetSerializedSizeInBytes()
 		return nil
@@ -360,7 +658,17 @@ func (r *Service) GetSerializedSizeInBytes(id identity.ID, out *uint64) error {
 	return ErrNotFound
 }
 
-func (r *Service) Stats(id identity.ID, out *roaring.Statistics) error {
+func (r *Service) Stats(id identity.ID, out *roaring.Statistics) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.Stats()
 		return nil
@@ -368,7 +676,17 @@ func (r *Service) Stats(id identity.ID, out *roaring.Statistics) error {
 	return ErrNotFound
 }
 
-func (r *Service) SetCopyOnWrite(payload OpBoolPayload, out *bool) error {
+func (r *Service) SetCopyOnWrite(payload OpBoolPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		b.SetCopyOnWrite(payload.Value)
 		*out = true
@@ -377,7 +695,17 @@ func (r *Service) SetCopyOnWrite(payload OpBoolPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) GetCopyOnWrite(id identity.ID, out *bool) error {
+func (r *Service) GetCopyOnWrite(id identity.ID, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.GetCopyOnWrite()
 		return nil
@@ -385,7 +713,17 @@ func (r *Service) GetCopyOnWrite(id identity.ID, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Clone(id identity.ID, out *identity.ID) error {
+func (r *Service) Clone(id identity.ID, out *identity.ID) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	bitmapPool := pool.RGetBitmapPool(id.ConnectionID)
 	if bitmapPool == nil {
 		return ErrEmpty
@@ -404,7 +742,17 @@ func (r *Service) Clone(id identity.ID, out *identity.ID) error {
 	return nil
 }
 
-func (r *Service) CloneCopyOnWriteContainers(id identity.ID, out *bool) error {
+func (r *Service) CloneCopyOnWriteContainers(id identity.ID, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		b.CloneCopyOnWriteContainers()
 		*out = true
@@ -413,7 +761,17 @@ func (r *Service) CloneCopyOnWriteContainers(id identity.ID, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) HasRunCompression(id identity.ID, out *bool) error {
+func (r *Service) HasRunCompression(id identity.ID, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		*out = b.HasRunCompression()
 		return nil
@@ -421,7 +779,17 @@ func (r *Service) HasRunCompression(id identity.ID, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) RunOptimize(id identity.ID, out *bool) error {
+func (r *Service) RunOptimize(id identity.ID, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(id); b != nil {
 		b.RunOptimize()
 		*out = true
@@ -430,7 +798,17 @@ func (r *Service) RunOptimize(id identity.ID, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) And(payload OpIDPayload, out *bool) error {
+func (r *Service) And(payload OpIDPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		bs[0].And(bs[1])
@@ -440,10 +818,20 @@ func (r *Service) And(payload OpIDPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) AndBuffer(payload OpBytesPayload, out *bool) error {
+func (r *Service) AndBuffer(payload OpBytesPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		tmp := roaring.New()
-		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+		if _, err = tmp.FromBuffer(payload.Value); err == nil {
 			b.And(tmp)
 			*out = true
 			return nil
@@ -454,7 +842,17 @@ func (r *Service) AndBuffer(payload OpBytesPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) AndAny(payload OpManyIDPayload, out *bool) error {
+func (r *Service) AndAny(payload OpManyIDPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	ids := append([]identity.ID{payload.CurrentID}, payload.TargetID...)
 	bs := pool.GetBitmaps(ids)
 	if len(ids) < 2 {
@@ -465,7 +863,17 @@ func (r *Service) AndAny(payload OpManyIDPayload, out *bool) error {
 	return nil
 }
 
-func (r *Service) AndAnyBuffer(payload OpManyBytesPayload, out *bool) error {
+func (r *Service) AndAnyBuffer(payload OpManyBytesPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	b := pool.GetBitmap(payload.ID)
 	if b == nil {
 		return ErrNotFound
@@ -473,7 +881,7 @@ func (r *Service) AndAnyBuffer(payload OpManyBytesPayload, out *bool) error {
 	bitmaps := make([]*roaring.Bitmap, 0, len(payload.Value))
 	for _, v := range payload.Value {
 		tmp := roaring.New()
-		if _, err := tmp.FromBuffer(v); err == nil {
+		if _, err = tmp.FromBuffer(v); err == nil {
 			bitmaps = append(bitmaps, tmp)
 		} else {
 			return err
@@ -487,7 +895,17 @@ func (r *Service) AndAnyBuffer(payload OpManyBytesPayload, out *bool) error {
 	return nil
 }
 
-func (r *Service) AndNot(payload OpIDPayload, out *bool) error {
+func (r *Service) AndNot(payload OpIDPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		bs[0].AndNot(bs[1])
@@ -497,10 +915,20 @@ func (r *Service) AndNot(payload OpIDPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) AndNotBuffer(payload OpBytesPayload, out *bool) error {
+func (r *Service) AndNotBuffer(payload OpBytesPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		tmp := roaring.New()
-		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+		if _, err = tmp.FromBuffer(payload.Value); err == nil {
 			b.AndNot(tmp)
 			*out = true
 			return nil
@@ -511,11 +939,21 @@ func (r *Service) AndNotBuffer(payload OpBytesPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) AndNotAnyBuffer(payload OpManyBytesPayload, out *bool) error {
+func (r *Service) AndNotAnyBuffer(payload OpManyBytesPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		tmp := roaring.New()
 		for _, v := range payload.Value {
-			if _, err := tmp.FromBuffer(v); err == nil {
+			if _, err = tmp.FromBuffer(v); err == nil {
 				b.AndNot(tmp)
 				tmp.Clear()
 			} else {
@@ -528,7 +966,17 @@ func (r *Service) AndNotAnyBuffer(payload OpManyBytesPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Or(payload OpIDPayload, out *bool) error {
+func (r *Service) Or(payload OpIDPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		bs[0].Or(bs[1])
@@ -538,10 +986,20 @@ func (r *Service) Or(payload OpIDPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) OrBuffer(payload OpBytesPayload, out *bool) error {
+func (r *Service) OrBuffer(payload OpBytesPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		tmp := roaring.New()
-		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+		if _, err = tmp.FromBuffer(payload.Value); err == nil {
 			b.Or(tmp)
 			*out = true
 			return nil
@@ -552,11 +1010,21 @@ func (r *Service) OrBuffer(payload OpBytesPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) OrAnyBuffer(payload OpManyBytesPayload, out *bool) error {
+func (r *Service) OrAnyBuffer(payload OpManyBytesPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		tmp := roaring.New()
 		for _, v := range payload.Value {
-			if _, err := tmp.FromBuffer(v); err == nil {
+			if _, err = tmp.FromBuffer(v); err == nil {
 				b.Or(tmp)
 				tmp.Clear()
 			} else {
@@ -569,7 +1037,17 @@ func (r *Service) OrAnyBuffer(payload OpManyBytesPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) OrAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[string]identity.ID) error {
+func (r *Service) OrAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[string]identity.ID) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		result := make(map[string]identity.ID)
 		tmp := roaring.New()
@@ -579,7 +1057,7 @@ func (r *Service) OrAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[str
 			result[k] = id
 			tmp.Clear()
 			for _, v := range g {
-				if _, err := tmp.FromBuffer(v); err == nil {
+				if _, err = tmp.FromBuffer(v); err == nil {
 					bitmap.Or(tmp)
 					tmp.Clear()
 				} else {
@@ -594,7 +1072,17 @@ func (r *Service) OrAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[str
 	return ErrNotFound
 }
 
-func (r *Service) OrCardinalityAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[string]uint64) error {
+func (r *Service) OrCardinalityAnyGroupBuffer(payload OpManyGroupBytesPayload, out *map[string]uint64) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		result := make(map[string]uint64)
 		tmp := roaring.New()
@@ -606,7 +1094,7 @@ func (r *Service) OrCardinalityAnyGroupBuffer(payload OpManyGroupBytesPayload, o
 			tmp.Clear()
 			bitmap.Clear()
 			for _, v := range g {
-				if _, err := tmp.FromBuffer(v); err == nil {
+				if _, err = tmp.FromBuffer(v); err == nil {
 					bitmap.Or(tmp)
 					tmp.Clear()
 				} else {
@@ -624,7 +1112,17 @@ func (r *Service) OrCardinalityAnyGroupBuffer(payload OpManyGroupBytesPayload, o
 	return ErrNotFound
 }
 
-func (r *Service) Xor(payload OpIDPayload, out *bool) error {
+func (r *Service) Xor(payload OpIDPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		bs[0].Xor(bs[1])
@@ -634,10 +1132,20 @@ func (r *Service) Xor(payload OpIDPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) XorBuffer(payload OpBytesPayload, out *bool) error {
+func (r *Service) XorBuffer(payload OpBytesPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		tmp := roaring.New()
-		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+		if _, err = tmp.FromBuffer(payload.Value); err == nil {
 			b.Xor(tmp)
 			*out = true
 			return nil
@@ -648,7 +1156,17 @@ func (r *Service) XorBuffer(payload OpBytesPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Intersects(payload OpIDPayload, out *bool) error {
+func (r *Service) Intersects(payload OpIDPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		*out = bs[0].Intersects(bs[1])
@@ -657,10 +1175,20 @@ func (r *Service) Intersects(payload OpIDPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) IntersectsBuffer(payload OpBytesPayload, out *bool) error {
+func (r *Service) IntersectsBuffer(payload OpBytesPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		tmp := roaring.New()
-		if _, err := tmp.FromBuffer(payload.Value); err == nil {
+		if _, err = tmp.FromBuffer(payload.Value); err == nil {
 			*out = b.Intersects(tmp)
 			return nil
 		} else {
@@ -670,7 +1198,17 @@ func (r *Service) IntersectsBuffer(payload OpBytesPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Equals(payload OpIDPayload, out *bool) error {
+func (r *Service) Equals(payload OpIDPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	bs := pool.GetBitmaps([]identity.ID{payload.CurrentID, payload.TargetID})
 	if bs[0] != nil && bs[1] != nil {
 		*out = bs[0].Equals(bs[1])
@@ -679,7 +1217,17 @@ func (r *Service) Equals(payload OpIDPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) EqualsBuffer(payload OpBytesPayload, out *bool) error {
+func (r *Service) EqualsBuffer(payload OpBytesPayload, out *bool) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	if b := pool.GetBitmap(payload.ID); b != nil {
 		tmp := roaring.New()
 		if _, err := tmp.FromBuffer(payload.Value); err == nil {
@@ -692,7 +1240,17 @@ func (r *Service) EqualsBuffer(payload OpBytesPayload, out *bool) error {
 	return ErrNotFound
 }
 
-func (r *Service) Iterate(payload OpIteratePayload, out *[]uint32) error {
+func (r *Service) Iterate(payload OpIteratePayload, out *[]uint32) (err error) {
+	defer func() {
+		rev := recover()
+		if rev != nil {
+			var ok bool
+			if err, ok = rev.(error); !ok {
+				err = errors.New(fmt.Sprintf("%+v", rev))
+			}
+			log.Printf("%s\n%s\n", rev, debug.Stack())
+		}
+	}()
 	b := pool.GetBitmap(payload.ID)
 	if b == nil {
 		out = new([]uint32)
