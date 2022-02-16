@@ -19,7 +19,8 @@ class RelayFactory
 
     /**
      * @param string $connection
-     * @return Relay
+     * @return \BitMap\Relay
+     * @throws \Spiral\Goridge\Exceptions\RelayException
      */
     public static function make(string $connection = ''): Relay
     {

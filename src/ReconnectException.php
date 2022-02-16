@@ -1,11 +1,12 @@
 <?php
 
+declare(strict_types=1);
 
 namespace BitMap;
 
-use Exception;
+use RuntimeException;
 
-class ReconnectException extends Exception
+class ReconnectException extends RuntimeException
 {
 
 }

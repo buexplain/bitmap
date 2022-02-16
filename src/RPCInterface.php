@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
 
 namespace BitMap;
 
 use Spiral\Goridge\Exceptions\ServiceException;
 use ErrorException;
+use Error;
+use Throwable;
 
 interface RPCInterface
 {
@@ -13,7 +16,7 @@ interface RPCInterface
      * @param $payload
      * @param int $flags
      * @return mixed
-     * @throws ReconnectException|ServiceException|ErrorException
+     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function call(string $method, $payload, int $flags = 0);
 

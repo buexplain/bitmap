@@ -26,6 +26,10 @@ class ClientFactory
 
     protected $inSwoole = false;
 
+    /**
+     * ClientFactory constructor.
+     * @throws \Spiral\Goridge\Exceptions\RelayException
+     */
     protected function __construct()
     {
         $this->inSwoole = class_exists('\Swoole\Coroutine') && Coroutine::getCid() > 0;
@@ -78,6 +82,10 @@ class ClientFactory
         }
     }
 
+    /**
+     * @return \BitMap\Client
+     * @throws \Spiral\Goridge\Exceptions\RelayException
+     */
     public static function make(): Client
     {
         return static::getInstance()->get();
