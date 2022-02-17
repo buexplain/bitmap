@@ -40,6 +40,7 @@ func init() {
 func Add(connectionID identity.ConnectionID) {
 	//如果没有定时检查延迟gc的配置，则直接回收
 	if argv.GCTick <= 0 {
+		//id被当场回收
 		service.GC(connectionID)
 		return
 	}
@@ -50,6 +51,7 @@ func Add(connectionID identity.ConnectionID) {
 
 func Del(connectionID identity.ConnectionID) bool {
 	if argv.GCTick <= 0 {
+		//无需延迟回收连接id，则认为删除失败，因为id被当场回收了
 		return false
 	}
 	lock.Lock()

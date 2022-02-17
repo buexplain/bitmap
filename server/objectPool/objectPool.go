@@ -15,7 +15,7 @@ func (r shards) get(connectionID identity.ConnectionID) *sync.Map {
 	if i >= 0 && i < len(r) {
 		return r[i]
 	}
-	return nil
+	return r[0]
 }
 
 type Pool struct {
@@ -33,11 +33,11 @@ func New() *Pool {
 	tmp.gc = make(chan identity.ConnectionID, 65536)
 	go func() {
 		for connectionID := range tmp.gc {
-			//获取连接所在的map
-			item := tmp.shards.get(connectionID)
-			if item != nil {
+			//获取连接所在的分片
+			shard := tmp.shards.get(connectionID)
+			if shard != nil {
 				//删除连接对应的所有bitmap对象
-				item.Delete(connectionID)
+				shard.Delete(connectionID)
 				//将连接id返回给连接id池
 				connectionIDPool.Put(connectionID)
 			}

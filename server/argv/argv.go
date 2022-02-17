@@ -14,7 +14,7 @@ var Address string
 // GCTick 定时多少秒扫描一次待回收的连接id
 var GCTick int
 
-// ReconnectWait 重连等待秒数，该秒之后没有重连的连接id，会被回收掉
+// ReconnectWait 重连等待秒数，该秒之后没有重连的连接id，会被回收掉，如果GCTick等于0，则该参数设置任何值都无意义
 var ReconnectWait int64
 
 func init() {
@@ -34,6 +34,11 @@ func init() {
 	flag.IntVar(&GCTick, "gcTick", 3, "connection gc tick second")
 	flag.Int64Var(&ReconnectWait, "reconnectWait", 60, "reconnect wait second")
 	flag.Parse()
+	//下面两个参数是一起作用的，任意一个为0，则不必启用延迟回收的连接id的逻辑
+	if GCTick <= 0 || ReconnectWait <= 0 {
+		GCTick = 0
+		ReconnectWait = 0
+	}
 }
 
 func fileExists(path string) bool {

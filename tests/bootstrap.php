@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Swoole\Coroutine;
+
 ini_set('display_errors', 'on');
 ini_set('display_startup_errors', 'on');
 
@@ -16,7 +18,7 @@ function getMillisecond() {
 }
 
 require BASE_PATH . '/vendor/autoload.php';
-//
+
 //\Swoole\Runtime::enableCoroutine(true, SWOOLE_HOOK_ALL);
 //use function Swoole\Coroutine\run;
 //run(function () {
@@ -52,6 +54,7 @@ require BASE_PATH . '/vendor/autoload.php';
 //
 //exit(1);
 
+//多进程，多协程读写测试
 if(defined('SWOOLE_HOOK_ALL') && class_exists('\Swoole\Process') && class_exists('\Swoole\Coroutine')) {
     echo 'start test multi process and multi coroutine concurrent'.PHP_EOL;
     \Swoole\Runtime::enableCoroutine(true, SWOOLE_HOOK_ALL);
@@ -60,13 +63,25 @@ if(defined('SWOOLE_HOOK_ALL') && class_exists('\Swoole\Process') && class_exists
         $process = new \Swoole\Process(function () use($processNum) {
             $wg = new \Swoole\Coroutine\WaitGroup();
             $client = \BitMap\ClientFactory::make();
-            $client->addRange(0, 200000);
-            $client->add(200000000);
+            $client->addRange(1, rand(1,10)*10000);
+            for($i=1;$i<=10;$i++) {
+                $client->add(400000+$i);
+            }
+            for($i=1;$i<=10;$i++) {
+                $client->add(3000000+$i);
+            }
+            for($i=1;$i<=10;$i++) {
+                $client->add(20000000+$i);
+            }
+            for($i=1;$i<=10;$i++) {
+                $client->add(100000000+$i);
+            }
+            $cardinality = $client->getCardinality();
             $bytes = $client->toBytes();
             $maxCoroutine = swoole_cpu_num()*20;
             for($coroutineNum=0; $coroutineNum<$maxCoroutine; $coroutineNum++) {
                 $wg->add(1);
-                \Swoole\Coroutine::create(function () use($wg, $bytes, $processNum, $coroutineNum) {
+                \Swoole\Coroutine::create(function () use($wg, $bytes, $processNum, $coroutineNum, $cardinality) {
                     $maxRequest = swoole_cpu_num()*200;
                     $success = 0;
                     $time = getMillisecond();
@@ -74,9 +89,12 @@ if(defined('SWOOLE_HOOK_ALL') && class_exists('\Swoole\Process') && class_exists
                         try {
                             $client = \BitMap\ClientFactory::make();
                             $client->fromBuffer($bytes);
-                            if($client->getCardinality() == 200001) {
+                            if($client->getCardinality() == $cardinality) {
                                 $success++;
                             }
+                            $client->clear();
+                            $client->__destruct();
+                            unset($client);
                         }catch (Throwable $throwable) {
                             echo sprintf('%s in %s on line %d%s', $throwable->getMessage(), $throwable->getFile(), $throwable->getLine(), PHP_EOL);
                             break;
@@ -93,7 +111,7 @@ if(defined('SWOOLE_HOOK_ALL') && class_exists('\Swoole\Process') && class_exists
                 });
             }
             $wg->wait();
-            echo '进程结束'.PHP_EOL;
+            echo '进程'.$processNum.'结束'.PHP_EOL;
             \BitMap\ClientFactory::getInstance()->__destruct();
         },false, 0, true);
         $process->start();
