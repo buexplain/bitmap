@@ -44,7 +44,7 @@ class ClientTest extends TestCase
         try {
             $client = ClientFactory::make();
             $this->assertTrue($client->ping());
-        }catch (Throwable $throwable) {
+        } catch (Throwable $throwable) {
             $this->fail(sprintf('%s in %s on line %d', $throwable->getMessage(), __FILE__, __LINE__));
         }
     }
@@ -57,7 +57,7 @@ class ClientTest extends TestCase
         try {
             $client = ClientFactory::make();
             $this->assertTrue($client->getCardinality() == 0);
-        }catch (Throwable $throwable) {
+        } catch (Throwable $throwable) {
             $this->fail(sprintf('%s in %s on line %d', $throwable->getMessage(), __FILE__, __LINE__));
         }
     }
@@ -65,7 +65,7 @@ class ClientTest extends TestCase
     /**
      * @depends testRelayFactory
      * @depends testGetCardinality
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testAdd()
     {
@@ -76,7 +76,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testAndCardinality()
     {
@@ -95,7 +95,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testOrCardinality()
     {
@@ -113,7 +113,7 @@ class ClientTest extends TestCase
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testCheckedAdd()
     {
@@ -125,29 +125,30 @@ class ClientTest extends TestCase
 
     /**
      * @depends testGetCardinality
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testAddMany()
     {
         $client = ClientFactory::make();
-        $client->addMany([0,1,0,1,2]);
+        $client->addMany([0, 1, 0, 1, 2]);
         $this->assertTrue($client->getCardinality() == 3);
     }
 
     /**
      * @depends testGetCardinality
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testAddRange()
     {
         $client = ClientFactory::make();
-        $client->addRange(0, 100);
-        $this->assertTrue($client->getCardinality() == 100);
+        $client->addRange(0, 4294967295);
+        $client->add(4294967295);
+        $this->assertTrue($client->getCardinality() == 4294967296);
     }
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testRank()
     {
@@ -162,7 +163,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testContains()
     {
@@ -177,7 +178,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testRemove()
     {
@@ -193,7 +194,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testCheckedRemove()
     {
@@ -209,20 +210,20 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAddMany
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testRemoveMany()
     {
         $client = ClientFactory::make();
-        $client->addMany([0,1,0,1,2]);
+        $client->addMany([0, 1, 0, 1, 2]);
         $this->assertTrue($client->getCardinality() == 3);
-        $client->removeMany([0,1,0,1,2]);
+        $client->removeMany([0, 1, 0, 1, 2]);
         $this->assertTrue($client->getCardinality() == 0);
     }
 
     /**
      * @depends testAddRange
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testRemoveRange()
     {
@@ -235,7 +236,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAddRange
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testFlip()
     {
@@ -250,7 +251,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testClear()
     {
@@ -264,7 +265,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testIsEmpty()
     {
@@ -276,7 +277,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testSelect()
     {
@@ -291,30 +292,39 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testMinimum()
     {
         $client = ClientFactory::make();
-        $client->add(1);
-        $client->add(5);
-        $this->assertTrue($client->minimum() == 1);
+        try {
+            $client->minimum();
+        } catch (Throwable $throwable) {
+            $this->assertTrue(stripos($throwable->getMessage(), 'bitmap is empty') !== false);
+        }
+        $client->add(0);
+        $this->assertTrue($client->maximum() == 0);
     }
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testMaximum()
     {
         $client = ClientFactory::make();
-        $client->add(5);
-        $this->assertTrue($client->maximum() == 5);
+        try {
+            $client->maximum();
+        } catch (Throwable $throwable) {
+            $this->assertTrue(stripos($throwable->getMessage(), 'bitmap is empty') !== false);
+        }
+        $client->add(4294967295);
+        $this->assertTrue($client->maximum() == 4294967295);
     }
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testString()
     {
@@ -328,7 +338,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testToArray()
     {
@@ -337,12 +347,12 @@ class ClientTest extends TestCase
         $client->add(1);
         $this->assertTrue($client->toArray() == [1]);
         $client->add(2);
-        $this->assertTrue($client->toArray() == [1,2]);
+        $this->assertTrue($client->toArray() == [1, 2]);
     }
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testToBase64()
     {
@@ -356,7 +366,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testToBytes()
     {
@@ -370,13 +380,13 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testFromBase64()
     {
         $client = ClientFactory::make();
-        for($i=10000;$i<10010;$i++) {
-            if($i > 10000) {
+        for ($i = 10000; $i < 10010; $i++) {
+            if ($i > 10000) {
                 $client->add($i);
             }
             $b64 = $client->toBase64();
@@ -388,13 +398,13 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testFromBuffer()
     {
         $client = ClientFactory::make();
-        for($i=10000;$i<10010;$i++) {
-            if($i > 10000) {
+        for ($i = 10000; $i < 10010; $i++) {
+            if ($i > 10000) {
                 $client->add($i);
             }
             $bytes = $client->toBytes();
@@ -406,7 +416,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testGetSizeInBytes()
     {
@@ -418,7 +428,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testGetSerializedSizeInBytes()
     {
@@ -430,7 +440,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testStats()
     {
@@ -441,7 +451,7 @@ class ClientTest extends TestCase
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testSetCopyOnWrite()
     {
@@ -452,7 +462,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testSetCopyOnWrite
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testGetCopyOnWrite()
     {
@@ -463,7 +473,7 @@ class ClientTest extends TestCase
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testClone()
     {
@@ -481,7 +491,7 @@ class ClientTest extends TestCase
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testCloneCopyOnWriteContainers()
     {
@@ -491,7 +501,7 @@ class ClientTest extends TestCase
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testHasRunCompression()
     {
@@ -500,19 +510,57 @@ class ClientTest extends TestCase
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testRunOptimize()
     {
-        $client = ClientFactory::make();
-        $client->runOptimize();
-        $this->assertTrue(true);
+        //测试压缩前和压缩后的长度区别
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        $clientB->runOptimize();
+        $this->assertTrue(strlen($clientA->toBase64()) == strlen($clientB->toBase64()));
+        //测试连续的数据
+        $clientA = ClientFactory::make();
+        $clientA->addRange(0, 4294967295);
+        $clientA->add(4294967295);
+        $clientB = ClientFactory::make();
+        $clientB->addRange(0, 4294967295);
+        $clientB->add(4294967295);
+        $this->assertTrue(strlen($clientA->toBase64()) == strlen($clientB->toBase64()));
+        //测试不同大小段的连续的数据
+        $step = 30000;
+        $section = [
+            0,
+            100000,
+            1000000,
+            10000000,
+            100000000,
+            1000000000,
+        ];
+        $clientA = ClientFactory::make();
+        foreach ($section as $i) {
+            $maxI = $i + $step;
+            for (; $i < $maxI; $i++) {
+                $clientA->add($i);
+            }
+        }
+        $clientB = clone $clientA;
+        $this->assertTrue(count($section) * $step == $clientA->getCardinality());
+        $this->assertTrue(count($section) * $step == $clientB->getCardinality());
+        //压缩一波
+        $clientA->runOptimize();
+        //压缩前一定小于压缩后
+        $this->assertTrue(strlen($clientB->toBase64()) > strlen($clientA->toBase64()));
+        //压缩与不压缩的内容应该保持一致
+        $this->assertTrue($clientA->equals($clientB) && $clientB->equals($clientA));
+        $this->assertTrue($clientA->equalsBase64($clientB->toBase64()) && $clientB->equalsBase64($clientA->toBase64()));
+        $this->assertTrue($clientA->equalsBuffer($clientB->toBytes()) && $clientB->equalsBuffer($clientA->toBytes()));
     }
 
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testAnd()
     {
@@ -529,7 +577,7 @@ class ClientTest extends TestCase
         $clientB->add(3);
         $clientB->add(5);
         $clientA->and($clientB);
-        $this->assertTrue($clientA->toArray() == [1,2,3]);
+        $this->assertTrue($clientA->toArray() == [1, 2, 3]);
 
         $clientB->clear();
         $clientB->add(5);
@@ -540,7 +588,7 @@ class ClientTest extends TestCase
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testAndBuffer()
     {
@@ -557,7 +605,7 @@ class ClientTest extends TestCase
         $clientB->add(3);
         $clientB->add(5);
         $clientA->andBuffer($clientB->toBytes());
-        $this->assertTrue($clientA->toArray() == [1,2,3]);
+        $this->assertTrue($clientA->toArray() == [1, 2, 3]);
 
         $clientB->clear();
         $clientB->add(5);
@@ -568,7 +616,35 @@ class ClientTest extends TestCase
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
+     */
+    public function testAndBase64()
+    {
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        $clientA->andBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == []);
+        $clientA->add(1);
+        $clientA->add(2);
+        $clientA->add(3);
+        $clientA->add(4);
+        $clientB->add(1);
+        $clientB->add(2);
+        $clientB->add(3);
+        $clientB->add(5);
+        $clientA->andBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == [1, 2, 3]);
+
+        $clientB->clear();
+        $clientB->add(5);
+        $clientA->andBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == []);
+    }
+
+    /**
+     * @depends testAdd
+     * @depends testToArray
+     * @throws Exception|Throwable
      */
     public function testAndAny()
     {
@@ -588,13 +664,13 @@ class ClientTest extends TestCase
         $client3->add(6);
         $client3->add(7);
         $clientA->andAny($clientB, $client3);
-        $this->assertTrue($clientA->toArray() == [2,3,6]);
+        $this->assertTrue($clientA->toArray() == [2, 3, 6]);
     }
 
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testAndAnyBuffer()
     {
@@ -614,13 +690,39 @@ class ClientTest extends TestCase
         $client3->add(6);
         $client3->add(7);
         $clientA->andAnyBuffer($clientB->toBytes(), $client3->toBytes());
-        $this->assertTrue($clientA->toArray() == [2,3,6]);
+        $this->assertTrue($clientA->toArray() == [2, 3, 6]);
     }
 
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
+     */
+    public function testAndAnyBase64()
+    {
+        $clientA = ClientFactory::make();
+        $clientA->add(1);
+        $clientA->add(2);
+        $clientA->add(3);
+        $clientA->add(6);
+        $clientB = ClientFactory::make();
+        $clientB->add(2);
+        $clientB->add(4);
+        $clientB->add(6);
+        $clientB->add(7);
+        $client3 = ClientFactory::make();
+        $client3->add(3);
+        $client3->add(5);
+        $client3->add(6);
+        $client3->add(7);
+        $clientA->andAnyBase64($clientB->toBase64(), $client3->toBase64());
+        $this->assertTrue($clientA->toArray() == [2, 3, 6]);
+    }
+
+    /**
+     * @depends testAdd
+     * @depends testToArray
+     * @throws Exception|Throwable
      */
     public function testAndNot()
     {
@@ -641,7 +743,7 @@ class ClientTest extends TestCase
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testAndNotBuffer()
     {
@@ -662,7 +764,28 @@ class ClientTest extends TestCase
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
+     */
+    public function testAndNotBase64()
+    {
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        $clientA->andNotBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == []);
+        $clientA->add(1);
+        $clientA->add(2);
+        $clientA->add(3);
+        $clientB->add(1);
+        $clientB->add(2);
+        $clientB->add(4);
+        $clientA->andNotBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == [3]);
+    }
+
+    /**
+     * @depends testAdd
+     * @depends testToArray
+     * @throws Exception|Throwable
      */
     public function testAndNotAnyBuffer()
     {
@@ -690,7 +813,35 @@ class ClientTest extends TestCase
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
+     */
+    public function testAndNotAnyBase64()
+    {
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        $clientC = ClientFactory::make();
+        $clientA->add(1);
+        $clientA->add(2);
+        $clientA->add(3);
+        $clientA->add(4);
+        $clientA->add(5);
+
+        $clientB->add(1);
+        $clientB->add(2);
+        $clientB->add(8);
+
+        $clientC->add(4);
+        $clientB->add(8);
+        $clientB->add(9);
+
+        $clientA->andNotAnyBase64($clientB->toBase64(), $clientC->toBase64());
+        $this->assertTrue($clientA->toArray() == [3, 5]);
+    }
+
+    /**
+     * @depends testAdd
+     * @depends testToArray
+     * @throws Exception|Throwable
      */
     public function testOr()
     {
@@ -703,13 +854,13 @@ class ClientTest extends TestCase
         $clientB->add(1);
         $clientB->add(3);
         $clientA->or($clientB);
-        $this->assertTrue($clientA->toArray() == [1,2,3]);
+        $this->assertTrue($clientA->toArray() == [1, 2, 3]);
     }
 
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testOrBuffer()
     {
@@ -722,13 +873,32 @@ class ClientTest extends TestCase
         $clientB->add(1);
         $clientB->add(3);
         $clientA->orBuffer($clientB->toBytes());
-        $this->assertTrue($clientA->toArray() == [1,2,3]);
+        $this->assertTrue($clientA->toArray() == [1, 2, 3]);
     }
 
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
+     */
+    public function testOrBase64()
+    {
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        $clientA->orBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == []);
+        $clientA->add(1);
+        $clientA->add(2);
+        $clientB->add(1);
+        $clientB->add(3);
+        $clientA->orBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == [1, 2, 3]);
+    }
+
+    /**
+     * @depends testAdd
+     * @depends testToArray
+     * @throws Exception|Throwable
      */
     public function testOrAnyBuffer()
     {
@@ -741,13 +911,13 @@ class ClientTest extends TestCase
         //添加了两个元素
         $clientA->add(1);
         $clientA->add(2);
-        $this->assertTrue($clientA->toArray() == [1,2]);
+        $this->assertTrue($clientA->toArray() == [1, 2]);
 
         //or了一个bitmap
         $clientB->add(1);
         $clientB->add(3);
         $clientA->orAnyBuffer($clientB->toBytes());
-        $this->assertTrue($clientA->toArray() == [1,2,3]);
+        $this->assertTrue($clientA->toArray() == [1, 2, 3]);
 
         //又or了两个bitmap
         $clientC = ClientFactory::make();
@@ -755,78 +925,177 @@ class ClientTest extends TestCase
         $clientD = ClientFactory::make();
         $clientD->add(5);
         $clientA->orAnyBuffer($clientC->toBytes(), $clientD->toBytes());
-        $this->assertTrue($clientA->toArray() == [1,2,3,4,5]);
+        $this->assertTrue($clientA->toArray() == [1, 2, 3, 4, 5]);
     }
 
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
+     */
+    public function testOrAnyBase64()
+    {
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        //空bitmap
+        $clientA->orAnyBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == []);
+
+        //添加了两个元素
+        $clientA->add(1);
+        $clientA->add(2);
+        $this->assertTrue($clientA->toArray() == [1, 2]);
+
+        //or了一个bitmap
+        $clientB->add(1);
+        $clientB->add(3);
+        $clientA->orAnyBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == [1, 2, 3]);
+
+        //又or了两个bitmap
+        $clientC = ClientFactory::make();
+        $clientC->add(4);
+        $clientD = ClientFactory::make();
+        $clientD->add(5);
+        $clientA->orAnyBase64($clientC->toBase64(), $clientD->toBase64());
+        $this->assertTrue($clientA->toArray() == [1, 2, 3, 4, 5]);
+    }
+
+    /**
+     * @depends testAdd
+     * @depends testToArray
+     * @throws Exception|Throwable
      */
     public function testOrAnyGroupBuffer()
     {
         $clientA = ClientFactory::make();
         $groupBuffer = [
-            'a'=>[
-                ClientFactory::make()->addMany([1,2,3])->toBytes(),
-                ClientFactory::make()->addMany([2,3])->toBytes(),
-                ClientFactory::make()->addMany([4,5])->toBytes(),
+            'a' => [
+                ClientFactory::make()->addMany([1, 2, 3])->toBytes(),
+                ClientFactory::make()->addMany([2, 3])->toBytes(),
+                ClientFactory::make()->addMany([4, 5])->toBytes(),
             ],
-            'b'=>[
+            'b' => [
                 ClientFactory::make()->addMany([3])->toBytes(),
-                ClientFactory::make()->addMany([2,3])->toBytes(),
-                ClientFactory::make()->addMany([4,5,6])->toBytes(),
+                ClientFactory::make()->addMany([2, 3])->toBytes(),
+                ClientFactory::make()->addMany([4, 5, 6])->toBytes(),
             ],
         ];
         $result = $clientA->orAnyGroupBuffer($groupBuffer);
-        foreach ($result as $group=>$client) {
-            if($group == 'a') {
-                $this->assertTrue($client->toArray() == [1,2,3,4,5]);
-            }elseif($group == 'b') {
-                $this->assertTrue($client->toArray() == [2,3,4,5,6]);
+        foreach ($result as $group => $client) {
+            if ($group == 'a') {
+                $this->assertTrue($client->toArray() == [1, 2, 3, 4, 5]);
+            } elseif ($group == 'b') {
+                $this->assertTrue($client->toArray() == [2, 3, 4, 5, 6]);
             }
         }
         //所有组交集汇总
-        $this->assertTrue($clientA->toArray() == [1,2,3,4,5,6]);
+        $this->assertTrue($clientA->toArray() == [1, 2, 3, 4, 5, 6]);
     }
 
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
+     */
+    public function testOrAnyGroupBase64()
+    {
+        $clientA = ClientFactory::make();
+        $groupB64 = [
+            'a' => [
+                ClientFactory::make()->addMany([1, 2, 3])->toBase64(),
+                ClientFactory::make()->addMany([2, 3])->toBase64(),
+                ClientFactory::make()->addMany([4, 5])->toBase64(),
+            ],
+            'b' => [
+                ClientFactory::make()->addMany([3])->toBase64(),
+                ClientFactory::make()->addMany([2, 3])->toBase64(),
+                ClientFactory::make()->addMany([4, 5, 6])->toBase64(),
+            ],
+        ];
+        $result = $clientA->orAnyGroupBase64($groupB64);
+        foreach ($result as $group => $client) {
+            if ($group == 'a') {
+                $this->assertTrue($client->toArray() == [1, 2, 3, 4, 5]);
+            } elseif ($group == 'b') {
+                $this->assertTrue($client->toArray() == [2, 3, 4, 5, 6]);
+            }
+        }
+        //所有组交集汇总
+        $this->assertTrue($clientA->toArray() == [1, 2, 3, 4, 5, 6]);
+    }
+
+    /**
+     * @depends testAdd
+     * @depends testToArray
+     * @throws Exception|Throwable
      */
     public function testOrCardinalityAnyGroupBuffer()
     {
         $clientA = ClientFactory::make();
         $groupBuffer = [
-            'a'=>[
-                ClientFactory::make()->addMany([1,2,3])->toBytes(),
-                ClientFactory::make()->addMany([2,3])->toBytes(),
-                ClientFactory::make()->addMany([4,5])->toBytes(),
+            'a' => [
+                ClientFactory::make()->addMany([1, 2, 3])->toBytes(),
+                ClientFactory::make()->addMany([2, 3])->toBytes(),
+                ClientFactory::make()->addMany([4, 5])->toBytes(),
             ],
-            'b'=>[
+            'b' => [
                 ClientFactory::make()->addMany([3])->toBytes(),
-                ClientFactory::make()->addMany([2,3])->toBytes(),
-                ClientFactory::make()->addMany([4,5,6])->toBytes(),
+                ClientFactory::make()->addMany([2, 3])->toBytes(),
+                ClientFactory::make()->addMany([4, 5, 6])->toBytes(),
             ],
         ];
         $result = $clientA->orCardinalityAnyGroupBuffer($groupBuffer);
-        foreach ($result as $group=>$cardinality) {
-            if($group == 'a') {
+        foreach ($result as $group => $cardinality) {
+            if ($group == 'a') {
                 $this->assertTrue($cardinality == 5);
-            }elseif($group == 'b') {
+            } elseif ($group == 'b') {
                 $this->assertTrue($cardinality == 5);
-            }elseif($group == 'total') {
+            } elseif ($group == 'total') {
                 $this->assertTrue($cardinality == $clientA->getCardinality());
             }
         }
         //所有组交集汇总
-        $this->assertTrue($clientA->toArray() == [1,2,3,4,5,6]);
+        $this->assertTrue($clientA->toArray() == [1, 2, 3, 4, 5, 6]);
     }
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @depends testToArray
+     * @throws Exception|Throwable
+     */
+    public function testOrCardinalityAnyGroupBase64()
+    {
+        $clientA = ClientFactory::make();
+        $groupB64 = [
+            'a' => [
+                ClientFactory::make()->addMany([1, 2, 3])->toBase64(),
+                ClientFactory::make()->addMany([2, 3])->toBase64(),
+                ClientFactory::make()->addMany([4, 5])->toBase64(),
+            ],
+            'b' => [
+                ClientFactory::make()->addMany([3])->toBase64(),
+                ClientFactory::make()->addMany([2, 3])->toBase64(),
+                ClientFactory::make()->addMany([4, 5, 6])->toBase64(),
+            ],
+        ];
+        $result = $clientA->orCardinalityAnyGroupBase64($groupB64);
+        foreach ($result as $group => $cardinality) {
+            if ($group == 'a') {
+                $this->assertTrue($cardinality == 5);
+            } elseif ($group == 'b') {
+                $this->assertTrue($cardinality == 5);
+            } elseif ($group == 'total') {
+                $this->assertTrue($cardinality == $clientA->getCardinality());
+            }
+        }
+        //所有组交集汇总
+        $this->assertTrue($clientA->toArray() == [1, 2, 3, 4, 5, 6]);
+    }
+
+    /**
+     * @depends testAdd
+     * @throws Exception|Throwable
      */
     public function testXor()
     {
@@ -837,12 +1106,12 @@ class ClientTest extends TestCase
         $clientB->add(1);
         $clientB->add(3);
         $clientA->xOr($clientB);
-        $this->assertTrue($clientA->toArray() == [2,3]);
+        $this->assertTrue($clientA->toArray() == [2, 3]);
     }
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testXorBuffer()
     {
@@ -853,13 +1122,29 @@ class ClientTest extends TestCase
         $clientB->add(1);
         $clientB->add(3);
         $clientA->xOrBuffer($clientB->toBytes());
-        $this->assertTrue($clientA->toArray() == [2,3]);
+        $this->assertTrue($clientA->toArray() == [2, 3]);
+    }
+
+    /**
+     * @depends testAdd
+     * @throws Exception|Throwable
+     */
+    public function testXOrBase64()
+    {
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        $clientA->add(1);
+        $clientA->add(2);
+        $clientB->add(1);
+        $clientB->add(3);
+        $clientA->xOrBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == [2, 3]);
     }
 
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testIntersects()
     {
@@ -880,7 +1165,7 @@ class ClientTest extends TestCase
     /**
      * @depends testAdd
      * @depends testToArray
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testIntersectsBuffer()
     {
@@ -900,7 +1185,28 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @depends testToArray
+     * @throws Exception|Throwable
+     */
+    public function testIntersectsBase64()
+    {
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        $clientA->intersectsBase64($clientB->toBase64());
+        $this->assertTrue($clientA->toArray() == []);
+        $clientA->add(1);
+        $this->assertFalse($clientA->intersectsBase64($clientB->toBase64()));
+        $clientB->add(1);
+        $this->assertTrue($clientA->intersectsBase64($clientB->toBase64()));
+        $clientA->add(2);
+        $clientB->add(3);
+        $this->assertTrue($clientA->intersectsBase64($clientB->toBase64()));
+        $this->assertTrue($clientA->toArray() == [1, 2]);
+    }
+
+    /**
+     * @depends testAdd
+     * @throws Exception|Throwable
      */
     public function testEquals()
     {
@@ -917,7 +1223,7 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
      */
     public function testEqualsBuffer()
     {
@@ -934,19 +1240,36 @@ class ClientTest extends TestCase
 
     /**
      * @depends testAdd
-     * @throws Exception
+     * @throws Exception|Throwable
+     */
+    public function testEqualsBase64()
+    {
+        $clientA = ClientFactory::make();
+        $clientB = ClientFactory::make();
+        $this->assertTrue($clientA->equalsBase64($clientB->toBase64()));
+        $clientA->add(1);
+        $clientB->add(1);
+        $this->assertTrue($clientA->equalsBase64($clientB->toBase64()));
+        $clientA->add(5);
+        $clientB->add(4);
+        $this->assertFalse($clientA->equalsBase64($clientB->toBase64()));
+    }
+
+    /**
+     * @depends testAdd
+     * @throws Exception|Throwable
      */
     public function testIterate()
     {
         $client = ClientFactory::make();
-        for($i=0; $i<100; $i++) {
+        for ($i = 0; $i < 100; $i++) {
             $client->add($i);
         }
         $clone = clone $client;
         $result = [];
         while (true) {
             $tmp = $clone->iterate(2);
-            if(count($tmp) == 0) {
+            if (count($tmp) == 0) {
                 break;
             }
             $result = array_merge($result, $tmp);

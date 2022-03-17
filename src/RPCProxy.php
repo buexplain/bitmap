@@ -35,24 +35,50 @@ class RPCProxy implements RPCInterface
     public function __destruct()
     {
         if ($this->pool instanceof ConnectionPool) {
-            $this->pool->close();
-            $this->pool = null;
+            try {
+                //因为底层close方法没有判断是否已经关闭了的情况，所以重复关闭会导致错误
+                //Call to a member function close() on null
+                $this->pool->close();
+                $this->pool = null;
+            }catch (Throwable $throwable) {
+            }
         }
     }
 
     protected function initHeartbeat()
     {
         Coroutine::create(function () {
-            $ch = new Coroutine\Channel();
+            $runningHeartbeat = true;
+            $runningSignal = true;
+            $sleep = new Coroutine\Channel();
+            Coroutine::create(function () use (&$runningHeartbeat, &$runningSignal, $sleep) {
+                //这里支持自定义配置等待信号超时时间
+                //因为swoole不支持同时唤醒两个不同超时时间的等待信号的协程
+                //所以设置这个超时时间必须与其它等待信号的协程的超时时间一致
+                //而且不要超过 max_wait_time 配置的时间
+                //因为进程在收到信号的那一个刻会有一个等待信号的协程被唤醒，其它要被唤醒的协程只能等待下一个timeout之后
+                $waitSignalTimeout = defined('BITMAP_WAIT_SIGNAL_TIMEOUT') ? BITMAP_WAIT_SIGNAL_TIMEOUT : 5;
+                if(!is_int($waitSignalTimeout)) {
+                    $waitSignalTimeout = 5;
+                }
+                while ($runningSignal) {
+                    $ret = Coroutine::waitSignal(SIGTERM, $waitSignalTimeout);
+                    if ($ret) {
+                        $runningHeartbeat = false;
+                        //收到结束信号
+                        $sleep->push(true);
+                        break;
+                    }
+                }
+            });
             $fill = false;
-            while (true) {
-                if ($this->pool === null) {
-                    $ch->close();
+            while ($runningHeartbeat) {
+                //每隔多少秒进行一次心跳检查
+                if ($sleep->pop(45)) {
                     break;
                 }
-                $ch->pop(30);
                 if ($this->pool === null) {
-                    $ch->close();
+                    $runningSignal = false;
                     break;
                 }
                 if (!$fill) {
@@ -77,7 +103,7 @@ class RPCProxy implements RPCInterface
                         } else {
                             try {
                                 $this->pool->put(null);
-                            }catch (Throwable $throwable) {
+                            } catch (Throwable $throwable) {
                             }
                         }
                     } catch (Throwable $throwable) {

@@ -55,36 +55,59 @@ class ClientFactory
         }
     }
 
+    /**
+     * @return \BitMap\ClientFactory
+     * @throws \Throwable
+     */
     public static function getInstance(): ClientFactory
     {
-        //判断是否为协程环境
+        if (static::$instance === null) {
+            //拿到初始化的机会，先给个false，避免其它的协程也走到这一步，这一步是纯cpu操作，不会引起协程调度
+            static::$instance = false;
+            try {
+                //初始化对象，这一步可能引起cpu调度，因为可能有连接bitmap server的动作
+                static::$instance = new static();
+                return static::$instance;
+            } catch (Throwable $throwable) {
+                //初始化失败，还原为null，以便下一个协程有机会初始化
+                static::$instance = null;
+                throw $throwable;
+            }
+        }
+        //无论什么环境，直接判断是否已经初始化过
+        if (static::$instance instanceof ClientFactory) {
+            return static::$instance;
+        }
+        //获取协程id
         if (class_exists('\Swoole\Coroutine')) {
             $cid = Coroutine::getCid();
         } else {
             $cid = 0;
         }
-        if (static::$instance === null) {
-            //拿到初始化的机会，先给个false，避免其它的协程也走到这一步，这一步是纯cpu操作，不会引起协程调度
-            static::$instance = false;
-            //初始化对象，并返回
-            static::$instance = new static();
+        //非协程环境
+        if ($cid <= 0) {
+            //再次初始化
+            if (!static::$instance instanceof ClientFactory) {
+                static::$instance = new static();
+            }
             return static::$instance;
         }
-        //没有机会初始化的对象的协程，死循环等待其它协程初始化成功
+        //协程环境
         $wait = 0;
-        while ($wait < 10) {
-            if ($cid > 0) {
-                //协程环境，进行休眠，让出cpu时间给初始化对象的协程使用
-                Coroutine::sleep(0.1);
-            }else{
-                usleep(100);
+        while ($wait < 1) {
+            //通过休眠让出cpu时间，给初始化对象的协程使用
+            Coroutine::sleep(0.1);
+            //判断其它协程是否初始化失败
+            if (static::$instance === null) {
+                throw new ReconnectException('Other coroutine failed to instantiate ClientFactory object');
             }
+            //判断其它协程是否初始化成功
             if (static::$instance instanceof ClientFactory) {
                 return static::$instance;
             }
             $wait++;
         }
-        //等待次数太多，直接异常
+        //等待次数太多，直接异常，导致这个原因是因为得到初始化机会的那个协程，没有把握住机会，初始化失败了
         throw new ReconnectException('Failed to instantiate ClientFactory object');
     }
 
@@ -98,6 +121,9 @@ class ClientFactory
         return new Client($this->rpc);
     }
 
+    /**
+     * @return \BitMap\Client
+     */
     public function get(): Client
     {
         if ($this->inSwoole) {
@@ -109,7 +135,7 @@ class ClientFactory
 
     /**
      * @return \BitMap\Client
-     * @throws \Spiral\Goridge\Exceptions\RelayException
+     * @throws \Throwable
      */
     public static function make(): Client
     {
