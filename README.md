@@ -1,3 +1,5 @@
+# 请使用 https://github.com/buexplain/roaring 代替本包。
+
 # php的bitmap操作类
 
 基于 [github.com/RoaringBitmap/roaring](https://pkg.go.dev/github.com/RoaringBitmap/roaring) 与 [github.com/spiral/goridge](https://pkg.go.dev/github.com/spiral/goridge) 给`php`提供完善的`bitmap`操作能力。
