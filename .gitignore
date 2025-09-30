@@ -4,5 +4,3 @@
 vendor
 .php_cs.cache
 composer.lock
-server/.*
-server/vendor
