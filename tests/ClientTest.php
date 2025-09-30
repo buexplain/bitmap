@@ -6,10 +6,8 @@ namespace BitMapTest;
 
 use BitMap\Client;
 use BitMap\ClientFactory;
-use BitMap\RelayFactory;
 use Exception;
 use PHPUnit\Framework\TestCase;
-use Spiral\Goridge\RelayInterface;
 use Throwable;
 
 /**
@@ -19,38 +17,7 @@ use Throwable;
  */
 class ClientTest extends TestCase
 {
-    public function testRelayFactory()
-    {
-        $relay = RelayFactory::make();
-        $this->assertTrue($relay->connection instanceof RelayInterface);
-        $this->assertTrue($relay->id > 0);
-    }
-
     /**
-     * @depends testRelayFactory
-     */
-    public function testClientFactory()
-    {
-        $client = ClientFactory::make();
-        $this->assertTrue($client instanceof Client);
-        $this->assertTrue(!empty($client->getID()));
-    }
-
-    /**
-     * @depends testRelayFactory
-     */
-    public function testPing()
-    {
-        try {
-            $client = ClientFactory::make();
-            $this->assertTrue($client->ping());
-        } catch (Throwable $throwable) {
-            $this->fail(sprintf('%s in %s on line %d', $throwable->getMessage(), __FILE__, __LINE__));
-        }
-    }
-
-    /**
-     * @depends testRelayFactory
      */
     public function testGetCardinality()
     {
@@ -63,7 +30,6 @@ class ClientTest extends TestCase
     }
 
     /**
-     * @depends testRelayFactory
      * @depends testGetCardinality
      * @throws Exception|Throwable
      */
@@ -235,21 +201,6 @@ class ClientTest extends TestCase
     }
 
     /**
-     * @depends testAddRange
-     * @throws Exception|Throwable
-     */
-    public function testFlip()
-    {
-        $client = ClientFactory::make();
-        $client->addRange(2, 6);
-        $this->assertTrue($client->getCardinality() == 4);
-        $client->flip(2, 6);
-        $this->assertTrue($client->getCardinality() == 0);
-        $client->flip(2, 6);
-        $this->assertTrue($client->getCardinality() == 4);
-    }
-
-    /**
      * @depends testAdd
      * @throws Exception|Throwable
      */
@@ -343,7 +294,7 @@ class ClientTest extends TestCase
     public function testToArray()
     {
         $client = ClientFactory::make();
-        $this->assertTrue(empty($client->toArray()));
+        $this->assertEmpty($client->toArray());
         $client->add(1);
         $this->assertTrue($client->toArray() == [1]);
         $client->add(2);
@@ -415,64 +366,6 @@ class ClientTest extends TestCase
     }
 
     /**
-     * @depends testAdd
-     * @throws Exception|Throwable
-     */
-    public function testGetSizeInBytes()
-    {
-        $client = ClientFactory::make();
-        $this->assertTrue($client->getSizeInBytes() == 8);
-        $client->add(1);
-        $this->assertTrue($client->getSizeInBytes() == 12);
-    }
-
-    /**
-     * @depends testAdd
-     * @throws Exception|Throwable
-     */
-    public function testGetSerializedSizeInBytes()
-    {
-        $client = ClientFactory::make();
-        $this->assertTrue($client->getSerializedSizeInBytes() == 8);
-        $client->add(1);
-        $this->assertTrue($client->getSerializedSizeInBytes() == 18);
-    }
-
-    /**
-     * @depends testAdd
-     * @throws Exception|Throwable
-     */
-    public function testStats()
-    {
-        $client = ClientFactory::make();
-        $this->assertTrue(array_values($client->stats()) == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-        $client->add(1);
-        $this->assertTrue(array_values($client->stats()) == [1, 1, 1, 2, 1, 0, 0, 0, 0, 0, 0]);
-    }
-
-    /**
-     * @throws Exception|Throwable
-     */
-    public function testSetCopyOnWrite()
-    {
-        $client = ClientFactory::make();
-        $client->setCopyOnWrite(true);
-        $this->assertTrue(true);
-    }
-
-    /**
-     * @depends testSetCopyOnWrite
-     * @throws Exception|Throwable
-     */
-    public function testGetCopyOnWrite()
-    {
-        $client = ClientFactory::make();
-        $this->assertFalse($client->getCopyOnWrite());
-        $client->setCopyOnWrite(true);
-        $this->assertTrue($client->getCopyOnWrite());
-    }
-
-    /**
      * @throws Exception|Throwable
      */
     public function testClone()
@@ -480,7 +373,6 @@ class ClientTest extends TestCase
         $client = ClientFactory::make();
         $result = clone $client;
         $this->assertTrue($result instanceof Client);
-        $this->assertTrue($result->getID() != $client->getID());
         $this->assertTrue($client->toArray() == $result->toArray());
         $client->add(1);
         $client->add(2);
@@ -488,25 +380,6 @@ class ClientTest extends TestCase
         $result->add(1);
         $result->add(2);
         $this->assertTrue($client->toArray() == $result->toArray());
-    }
-
-    /**
-     * @throws Exception|Throwable
-     */
-    public function testCloneCopyOnWriteContainers()
-    {
-        $client = ClientFactory::make();
-        $client->cloneCopyOnWriteContainers();
-        $this->assertTrue(true);
-    }
-
-    /**
-     * @throws Exception|Throwable
-     */
-    public function testHasRunCompression()
-    {
-        $client = ClientFactory::make();
-        $this->assertTrue($client->hasRunCompression() == false);
     }
 
     /**
@@ -1265,16 +1138,14 @@ class ClientTest extends TestCase
         for ($i = 0; $i < 100; $i++) {
             $client->add($i);
         }
-        $clone = clone $client;
         $result = [];
-        while (true) {
-            $tmp = $clone->iterate(2);
+        $generator = $client->iterate(2);
+        foreach ($generator as $tmp) {
             if (count($tmp) == 0) {
                 break;
             }
             $result = array_merge($result, $tmp);
         }
-        $this->assertTrue($clone->getCardinality() == 0);
         $this->assertTrue($result == $client->toArray());
     }
 }

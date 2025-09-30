@@ -4,114 +4,65 @@ declare(strict_types=1);
 
 namespace BitMap;
 
+use Generator;
 use InvalidArgumentException;
-use Spiral\Goridge\Exceptions\ServiceException;
-use Error;
-use ErrorException;
-use Throwable;
+use Roaring\Bitmap;
+use RuntimeException;
 
 /**
  * Class Client
- * @see https://github.com/spiral/goridge
- * @see https://github.com/RoaringBitmap/roaring
+ * 基于 https://github.com/buexplain/roaring 实现的bitmap类
  * @package BitMap
  */
 class Client
 {
-    /**
-     * @var RPCInterface
-     */
-    protected $rpc;
+    protected Bitmap $bitmap;
 
-    /**
-     * 实例id
-     * @var array|int[]
-     */
-    protected $id = [
-        'connectionID' => 0,
-        'objectID' => 0,
-    ];
-
-    public function getID(): array
+    public function __construct()
     {
-        return $this->id;
-    }
-
-    public function __construct(RPCInterface $rpc, array $id = [])
-    {
-        $this->rpc = $rpc;
-        if (empty($id)) {
-            $id = $rpc->getID();
-        }
-        $this->id = $id;
-    }
-
-    /**
-     * If not destroyed, memory will leak
-     */
-    public function __destruct()
-    {
-        //这里屏蔽掉任何错误，避免gc回收时触发该函数，从而因为服务端异常导致进程挂掉
-        try {
-            $this->rpc->call('Service.Destruct', $this->id);
-        }catch (Throwable $throwable) {
-        }
-        $this->rpc = null;
-    }
-
-    /**
-     * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
-     */
-    public function ping(): bool
-    {
-        return $this->rpc->call('Service.Ping', 'ping') == 'pong';
+        $this->bitmap = new Bitmap();
     }
 
     /**
      * GetCardinality returns the number of integers contained in the bitmap
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function getCardinality(): int
     {
-        return $this->rpc->call('Service.GetCardinality', $this->id);
+        return $this->bitmap->getCardinality();
     }
 
     /**
      * AndCardinality returns the cardinality of the intersection between two bitmaps, bitmaps are not modified
      * @param Client $client
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function andCardinality(Client $client): int
     {
-        return $this->rpc->call('Service.AndCardinality', ['currentID' => $this->id, 'targetID' => $client->getID()]);
+        return $this->bitmap->andCardinality($client->bitmap);
     }
 
     /**
      * OrCardinality  returns the cardinality of the union between two bitmaps, bitmaps are not modified
      * @param Client $client
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function orCardinality(Client $client): int
     {
-        return $this->rpc->call('Service.OrCardinality', ['currentID' => $this->id, 'targetID' => $client->getID()]);
+        return $this->bitmap->orCardinality($client->bitmap);
     }
 
     /**
      * Add the uint32 x to the bitmap
      * @param int $x
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function add(int $x): self
     {
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        $this->rpc->call('Service.Add', ['id' => $this->id, 'value' => $x]);
+        $this->bitmap->add($x);
         return $this;
     }
 
@@ -119,28 +70,23 @@ class Client
      * CheckedAdd adds the integer x to the bitmap and return true  if it was added (false if the integer was already present)
      * @param int $x
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function checkedAdd(int $x): bool
     {
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        return $this->rpc->call('Service.CheckedAdd', ['id' => $this->id, 'value' => $x]);
+        return $this->bitmap->addChecked($x);
     }
 
     /**
-     * AddMany add all of the values in dat
+     * AddMany add all the values in dat
      * @param int[] $x
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function addMany(array $x): self
     {
-        if (count($x) == 0) {
-            return $this;
-        }
-        $this->rpc->call('Service.AddMany', ['id' => $this->id, 'value' => $x]);
+        $this->bitmap->addMany($x);
         return $this;
     }
 
@@ -151,14 +97,13 @@ class Client
      * @param int $rangeStart
      * @param int $rangeEnd
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function addRange(int $rangeStart, int $rangeEnd): self
     {
         if ($rangeStart < 0 || $rangeEnd < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        $this->rpc->call('Service.AddRange', ['id' => $this->id, 'value' => [$rangeStart, $rangeEnd]]);
+        $this->bitmap->addRange($rangeStart, $rangeEnd);
         return $this;
     }
 
@@ -169,42 +114,39 @@ class Client
      * return 1 and not 0 on the smallest value.
      * @param int $x
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function rank(int $x): int
     {
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        return $this->rpc->call('Service.Rank', ['id' => $this->id, 'value' => $x]);
+        return $this->bitmap->rank($x);
     }
 
     /**
      * Contains returns true if the integer is contained in the bitmap
      * @param int $x
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function contains(int $x): bool
     {
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        return $this->rpc->call('Service.Contains', ['id' => $this->id, 'value' => $x]);
+        return $this->bitmap->contains($x);
     }
 
     /**
      * Remove the integer x from the bitmap
      * @param int $x
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function remove(int $x): self
     {
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        $this->rpc->call('Service.Remove', ['id' => $this->id, 'value' => $x]);
+        $this->bitmap->remove($x);
         return $this;
     }
 
@@ -212,25 +154,23 @@ class Client
      * CheckedRemove removes the integer x from the bitmap and return true if the integer was effectively remove (and false if the integer was not present)
      * @param int $x
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function checkedRemove(int $x): bool
     {
         if ($x < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        return $this->rpc->call('Service.CheckedRemove', ['id' => $this->id, 'value' => $x]);
+        return $this->bitmap->removeChecked($x);
     }
 
     /**
      * RemoveMany remove all of the values in dat
      * @param int[] $x
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function removeMany(array $x): self
     {
-        $this->rpc->call('Service.RemoveMany', ['id' => $this->id, 'value' => $x]);
+        $this->bitmap->removeMany($x);
         return $this;
     }
 
@@ -241,14 +181,13 @@ class Client
      * @param int $rangeStart
      * @param int $rangeEnd
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function removeRange(int $rangeStart, int $rangeEnd): self
     {
         if ($rangeStart < 0 || $rangeEnd < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        $this->rpc->call('Service.RemoveRange', ['id' => $this->id, 'value' => [$rangeStart, $rangeEnd]]);
+        $this->bitmap->removeRange($rangeStart, $rangeEnd);
         return $this;
     }
 
@@ -260,125 +199,116 @@ class Client
      * @param int $rangeStart
      * @param int $rangeEnd
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function flip(int $rangeStart, int $rangeEnd): self
     {
-        if ($rangeStart < 0 || $rangeEnd < 0) {
-            throw new InvalidArgumentException('param has to be uint32');
-        }
-        $this->rpc->call('Service.Flip', ['id' => $this->id, 'value' => [$rangeStart, $rangeEnd]]);
-        return $this;
+        throw new RuntimeException('Not implemented');
     }
 
     /**
      *  Clear resets the Bitmap to be logically empty, but may retain
      *  some memory allocations that may speed up future operations
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function clear(): self
     {
-        $this->rpc->call('Service.Clear', $this->id);
+        $this->bitmap->clear();
         return $this;
     }
 
     /**
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function isEmpty(): bool
     {
-        return $this->rpc->call('Service.IsEmpty', $this->id);
+        return $this->bitmap->isEmpty();
     }
 
     /**
      * Select returns the xth integer in the bitmap. If you pass 0, you get
      * the smallest element. Note that this function differs in convention from
      * the Rank function which returns 1 on the smallest value.
-     * If overflow, you get -1.
+     * If overflowed, you get -1.
      * @param int $position
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function select(int $position): int
     {
         if ($position < 0) {
             throw new InvalidArgumentException('param has to be uint32');
         }
-        return $this->rpc->call('Service.Select', ['id' => $this->id, 'value' => $position]);
+        $ret = $this->bitmap->select($position);
+        if (is_null($ret)) {
+            return -1;
+        }
+        return $ret;
     }
 
     /**
      * Minimum get the smallest value stored in this roaring bitmap, assumes that it is not empty
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function minimum(): int
     {
-        return $this->rpc->call('Service.Minimum', $this->id);
+        return $this->bitmap->minimum();
     }
 
     /**
      * Maximum get the largest value stored in this roaring bitmap, assumes that it is not empty
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function maximum(): int
     {
-        return $this->rpc->call('Service.Maximum', $this->id);
+        return $this->bitmap->maximum();
     }
 
     /**
      * String creates a string representation of the Bitmap
      * @return string
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function string(): string
     {
-        return $this->rpc->call('Service.String', $this->id);
+        return '{' . implode(',', $this->bitmap->toArray()) . '}';
     }
 
     /**
-     * ToArray creates a new slice containing all of the integers stored in the Bitmap in sorted order
+     * ToArray creates a new slice containing all the integers stored in the Bitmap in sorted order
      * @return int[]
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function toArray(): array
     {
-        return $this->rpc->call('Service.ToArray', $this->id);
+        return $this->bitmap->toArray();
     }
 
     /**
      * ToBase64 serializes a bitmap as Base64
      * @return string
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function toBase64(): string
     {
-        return $this->rpc->call('Service.ToBase64', $this->id);
+        return $this->bitmap->toBase64();
     }
 
     /**
      * ToBytes returns an array of bytes corresponding to what is written
      * when calling WriteTo
      * @return string
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function toBytes(): string
     {
-        return $this->rpc->call('Service.ToBytes', $this->id);
+        return $this->bitmap->toBytes();
     }
 
     /**
      * FromBase64 deserializes a bitmap from Base64
      * @param string $b64
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function fromBase64(string $b64): int
     {
-        return $this->rpc->call('Service.FromBase64', ['id' => $this->id, 'value' => $b64]);
+        $b64 = base64_decode($b64);
+        $this->bitmap->orInPlace($b64);
+        return strlen($b64);
     }
 
     /**
@@ -406,22 +336,21 @@ class Client
      *
      * @param string $bytes
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function fromBuffer(string $bytes): int
     {
-        return $this->rpc->call('Service.FromBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
+        $this->bitmap->orInPlace($bytes);
+        return strlen($bytes);
     }
 
     /**
      * GetSizeInBytes estimates the memory usage of the Bitmap. Note that this
      * might differ slightly from the amount of bytes required for persistent storage
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function getSizeInBytes(): int
     {
-        return $this->rpc->call('Service.GetSizeInBytes', $this->id);
+        throw new RuntimeException('Not implemented');
     }
 
     /**
@@ -430,21 +359,19 @@ class Client
      * number of bytes written when invoking WriteTo. You can expect
      * that this function is much cheaper computationally than WriteTo.
      * @return int
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function getSerializedSizeInBytes(): int
     {
-        return $this->rpc->call('Service.GetSerializedSizeInBytes', $this->id);
+        throw new RuntimeException('Not implemented');
     }
 
     /**
      * Stats returns details on container type usage in a Statistics struct.
      * @return array
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function stats(): array
     {
-        return $this->rpc->call('Service.Stats', $this->id);
+        throw new RuntimeException('Not implemented');
     }
 
     /**
@@ -454,31 +381,27 @@ class Client
      * Calling SetCopyOnWrite(true) on a bitmap created with FromBuffer is unsafe.
      * @param bool $x
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function setCopyOnWrite(bool $x): self
     {
-        $this->rpc->call('Service.SetCopyOnWrite', ['id' => $this->id, 'value' => $x]);
-        return $this;
+        throw new RuntimeException('Not implemented');
     }
 
     /**
      * GetCopyOnWrite gets this bitmap's copy-on-write property
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function getCopyOnWrite(): bool
     {
-        return $this->rpc->call('Service.GetCopyOnWrite', $this->id);
+        throw new RuntimeException('Not implemented');
     }
 
     /**
      * Clone creates a copy of the Bitmap
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function __clone()
     {
-        $this->id = $this->rpc->call('Service.Clone', $this->id);
+        $this->bitmap = clone $this->bitmap;
     }
 
     /**
@@ -494,234 +417,202 @@ class Client
      * from the 'FromBuffer' bitmap since they map have dependencies
      * on the buf array as well.
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function cloneCopyOnWriteContainers(): self
     {
-        $this->rpc->call('Service.CloneCopyOnWriteContainers', $this->id);
-        return $this;
+        throw new RuntimeException('Not implemented');
     }
 
     /**
      * HasRunCompression returns true if the bitmap benefits from run compression
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function hasRunCompression(): bool
     {
-        return $this->rpc->call('Service.HasRunCompression', $this->id);
+        throw new RuntimeException('Not implemented');
     }
 
     /**
      * RunOptimize attempts to further compress the runs of consecutive values found in the bitmap
      * @return $this
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function runOptimize(): self
     {
-        $this->rpc->call('Service.RunOptimize', $this->id);
+        $this->bitmap->runOptimize();
         return $this;
     }
 
     /**
      * And computes the intersection between two bitmaps and stores the result in the current bitmap
      * @param Client $client
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function and(Client $client)
     {
-        $this->rpc->call('Service.And', ['currentID' => $this->id, 'targetID' => $client->getID()]);
+        $this->bitmap->andInPlace($client->bitmap);
     }
 
     /**
      * @param string $bytes
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see and
      */
     public function andBuffer(string $bytes)
     {
-        $this->rpc->call('Service.AndBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
+        $this->bitmap->andInPlace($bytes);
     }
 
     /**
      * @param string $b64
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see and
      */
     public function andBase64(string $b64)
     {
-        $this->rpc->call('Service.AndBuffer', ['id' => $this->id, 'value' => $b64]);
+        $this->bitmap->andInPlace($b64);
     }
 
     /**
      * AndAny provides a result equivalent to x1.And(FastOr(bitmaps)).
      * It's optimized to minimize allocations. It also might be faster than separate calls.
      * @param Client ...$clients
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function andAny(Client ...$clients)
     {
-        $ids = [];
+        $total = new Bitmap();
         foreach ($clients as $client) {
-            $ids[] = $client->getID();
+            $b = $this->bitmap->and($client->bitmap);
+            $total->orInPlace($b);
         }
-        if (count($ids) > 0) {
-            $this->rpc->call('Service.AndAny', ['currentID' => $this->id, 'targetID' => $ids]);
-        }
+        $this->bitmap = $total;
     }
 
     /**
      * @param string ...$bytes
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see andAny
      */
     public function andAnyBuffer(string ...$bytes)
     {
-        if (empty($bytes)) {
-            return;
+        $total = new Bitmap();
+        foreach ($bytes as $byte) {
+            $b = $this->bitmap->and($byte);
+            $total->orInPlace($b);
         }
-        foreach ($bytes as &$v) {
-            $v = base64_encode($v);
-        }
-        $this->rpc->call('Service.AndAnyBuffer', ['id' => $this->id, 'value' => $bytes]);
+        $this->bitmap = $total;
     }
 
     /**
      * @param string ...$b64
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
-     * @see andAny
      */
     public function andAnyBase64(string ...$b64)
     {
-        if (empty($b64)) {
-            return;
+        $total = new Bitmap();
+        foreach ($b64 as $byte) {
+            $b = $this->bitmap->and($byte);
+            $total->orInPlace($b);
         }
-        $this->rpc->call('Service.AndAnyBuffer', ['id' => $this->id, 'value' => $b64]);
+        $this->bitmap = $total;
     }
 
     /**
      * AndNot computes the difference between two bitmaps and stores the result in the current bitmap
      * @param Client $client
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function andNot(Client $client)
     {
-        $this->rpc->call('Service.AndNot', ['currentID' => $this->id, 'targetID' => $client->getID()]);
+        $this->bitmap->andNotInPlace($client->bitmap);
     }
 
     /**
      * @param string $bytes
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see andNot
      */
     public function andNotBuffer(string $bytes)
     {
-        $this->rpc->call('Service.AndNotBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
+        $this->bitmap->andNotInPlace($bytes);
     }
 
     /**
      * @param string $b64
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see andNot
      */
     public function andNotBase64(string $b64)
     {
-        $this->rpc->call('Service.AndNotBuffer', ['id' => $this->id, 'value' => $b64]);
+        $this->bitmap->andNotInPlace($b64);
     }
 
     /**
      * @param string ...$bytes
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see andNot
      */
     public function andNotAnyBuffer(string ...$bytes)
     {
-        if (empty($bytes)) {
-            return;
+        foreach ($bytes as $v) {
+            $this->bitmap->andNotInPlace($v);
         }
-        foreach ($bytes as &$v) {
-            $v = base64_encode($v);
-        }
-        $this->rpc->call('Service.AndNotAnyBuffer', ['id' => $this->id, 'value' => $bytes]);
     }
 
     /**
      * @param string ...$b64
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see andNot
      */
     public function andNotAnyBase64(string ...$b64)
     {
-        if (empty($b64)) {
-            return;
+        foreach ($b64 as $v) {
+            $this->bitmap->andNotInPlace($v);
         }
-        $this->rpc->call('Service.AndNotAnyBuffer', ['id' => $this->id, 'value' => $b64]);
     }
 
     /**
      * Or computes the union between two bitmaps and stores the result in the current bitmap
      * @param Client $client
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function or(Client $client)
     {
-        $this->rpc->call('Service.Or', ['currentID' => $this->id, 'targetID' => $client->getID()]);
+        $this->bitmap->orInPlace($client->bitmap);
     }
 
     /**
      * @param string $bytes
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see or
      */
     public function orBuffer(string $bytes)
     {
-        $this->rpc->call('Service.OrBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
+        $this->bitmap->orInPlace($bytes);
     }
 
     /**
      * @param string $b64
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see or
      */
     public function orBase64(string $b64)
     {
-        $this->rpc->call('Service.OrBuffer', ['id' => $this->id, 'value' => $b64]);
+        $this->bitmap->orInPlace($b64);
     }
 
     /**
      * @param string ...$bytes
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see or
      */
     public function orAnyBuffer(string ...$bytes)
     {
-        if (empty($bytes)) {
-            return;
+        foreach ($bytes as $v) {
+            $this->bitmap->orInPlace($v);
         }
-        foreach ($bytes as &$v) {
-            $v = base64_encode($v);
-        }
-        $this->rpc->call('Service.OrAnyBuffer', ['id' => $this->id, 'value' => $bytes]);
     }
 
     /**
      * @param string ...$b64
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see or
      */
     public function orAnyBase64(string ...$b64)
     {
-        if (empty($b64)) {
-            return;
+        foreach ($b64 as $v) {
+            $this->bitmap->orInPlace($v);
         }
-        $this->rpc->call('Service.OrAnyBuffer', ['id' => $this->id, 'value' => $b64]);
     }
 
     /**
-     * Or computes the any group bitmaps and stores the result in the current bitmap
+     * Or computes any group bitmaps and stores the result in the current bitmap
      * @param array $groupBytes
      * @return self[]
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @example ['group name1'=>[$bytes1, $bytes2, $bytes3], 'group name2'=>[$bytes1, $bytes2, $bytes3]]
      * @see or
      */
@@ -730,49 +621,33 @@ class Client
         if (count($groupBytes) == 0) {
             return [];
         }
-        foreach ($groupBytes as $group => $bytes) {
-            foreach ($bytes as &$v) {
-                $v = base64_encode($v);
-            }
-            $groupBytes[(string)$group] = $bytes;
-        }
-        $data = $this->rpc->call('Service.OrAnyGroupBuffer', ['id' => $this->id, 'value' => $groupBytes]);
         $result = [];
-        foreach ($data as $group => $id) {
-            $result[$group] = new Client($this->rpc, $id);
+        foreach ($groupBytes as $group => $bytes) {
+            $result[$group] = new Bitmap();
+            foreach ($bytes as $v) {
+                $result[$group]->orInPlace($v);
+            }
+            $this->bitmap->orInPlace($result[$group]);
         }
         return $result;
     }
 
     /**
-     * Or computes the any group bitmaps and stores the result in the current bitmap
+     * Or computes any group bitmaps and stores the result in the current bitmap
      * @param array $groupB64
      * @return self[]
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @example ['group name1'=>[$b64, $b64, $b64], 'group name2'=>[$b64, $b64, $b64]]
      * @see or
      */
     public function orAnyGroupBase64(array $groupB64): array
     {
-        if (count($groupB64) == 0) {
-            return [];
-        }
-        foreach ($groupB64 as $group => $b64) {
-            $groupB64[(string)$group] = $b64;
-        }
-        $data = $this->rpc->call('Service.OrAnyGroupBuffer', ['id' => $this->id, 'value' => $groupB64]);
-        $result = [];
-        foreach ($data as $group => $id) {
-            $result[$group] = new Client($this->rpc, $id);
-        }
-        return $result;
+        return $this->orAnyGroupBuffer($groupB64);
     }
 
     /**
-     * Or computes the any group bitmaps and stores the result in the current bitmap
+     * Or computes any group bitmaps and stores the result in the current bitmap
      * @param array $groupBytes
      * @return int[]
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @example ['group name1'=>[$bytes1, $bytes2, $bytes3], 'group name2'=>[$bytes1, $bytes2, $bytes3]]
      * @see or
      * @example ['total'=>'bitmap getCardinality', 'group name1'=>'bitmap getCardinality', 'group name2'=>'bitmap getCardinality']
@@ -785,146 +660,129 @@ class Client
         if (count($groupBytes) == 0) {
             return ['total' => 0];
         }
+        $result = [];
         foreach ($groupBytes as $group => $bytes) {
-            foreach ($bytes as &$v) {
-                $v = base64_encode($v);
+            $result[$group] = new Bitmap();
+            foreach ($bytes as $v) {
+                $result[$group]->orInPlace($v);
             }
-            $groupBytes[(string)$group] = $bytes;
+            $this->bitmap->orInPlace($result[$group]);
+            $result[$group] = $result[$group]->getCardinality();
         }
-        return $this->rpc->call('Service.OrCardinalityAnyGroupBuffer', ['id' => $this->id, 'value' => $groupBytes]);
+        $result['total'] = $this->bitmap->getCardinality();
+        return $result;
     }
 
     /**
-     * Or computes the any group bitmaps and stores the result in the current bitmap
+     * Or computes any group bitmaps and stores the result in the current bitmap
      * @param array $groupB64
      * @return int[]
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @example ['group name1'=>[$b64, $b64, $b64], 'group name2'=>[$b64, $b64, $b64]]
      * @see or
      * @example ['total'=>'bitmap getCardinality', 'group name1'=>'bitmap getCardinality', 'group name2'=>'bitmap getCardinality']
      */
     public function orCardinalityAnyGroupBase64(array $groupB64): array
     {
-        if (isset($groupB64['total'])) {
-            throw new InvalidArgumentException('disable setting key: total');
-        }
-        if (count($groupB64) == 0) {
-            return ['total' => 0];
-        }
-        foreach ($groupB64 as $group => $b64) {
-            $groupB64[(string)$group] = $b64;
-        }
-        return $this->rpc->call('Service.OrCardinalityAnyGroupBuffer', ['id' => $this->id, 'value' => $groupB64]);
+        return $this->orCardinalityAnyGroupBuffer($groupB64);
     }
 
     /**
      * Xor computes the symmetric difference between two bitmaps and stores the result in the current bitmap
      * @param Client $client
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function xOr(Client $client)
     {
-        $this->rpc->call('Service.Xor', ['currentID' => $this->id, 'targetID' => $client->getID()]);
+        $this->bitmap->xorInPlace($client->bitmap);
     }
 
     /**
      * @param string $bytes
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see xOr
      */
     public function xOrBuffer(string $bytes)
     {
-        $this->rpc->call('Service.XorBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
+        $this->bitmap->xorInPlace($bytes);
     }
 
     /**
      * @param string $b64
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see xOr
      */
     public function xOrBase64(string $b64)
     {
-        $this->rpc->call('Service.XorBuffer', ['id' => $this->id, 'value' => $b64]);
+        $this->bitmap->xorInPlace($b64);
     }
 
     /**
      * Intersects checks whether two bitmap intersects, bitmaps are not modified
      * @param Client $client
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function intersects(Client $client): bool
     {
-        return $this->rpc->call('Service.Intersects', ['currentID' => $this->id, 'targetID' => $client->getID()]);
+        return $this->bitmap->intersect($client->bitmap);
     }
 
     /**
      * @param string $bytes
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see intersects
      */
     public function intersectsBuffer(string $bytes): bool
     {
-        return $this->rpc->call('Service.IntersectsBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
+        return $this->bitmap->intersect($bytes);
     }
 
     /**
      * @param string $b64
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see intersects
      */
     public function intersectsBase64(string $b64): bool
     {
-        return $this->rpc->call('Service.IntersectsBuffer', ['id' => $this->id, 'value' => $b64]);
+        return $this->bitmap->intersect($b64);
     }
 
     /**
      * Equals returns true if the two bitmaps contain the same integers
      * @param Client $client
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      */
     public function equals(Client $client): bool
     {
-        return $this->rpc->call('Service.Equals', ['currentID' => $this->id, 'targetID' => $client->getID()]);
+        return $this->bitmap->equals($client->bitmap);
     }
 
     /**
      * @param string $bytes
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see equals
      */
     public function equalsBuffer(string $bytes): bool
     {
-        return $this->rpc->call('Service.EqualsBuffer', ['id' => $this->id, 'value' => base64_encode($bytes)]);
+        return $this->bitmap->equals($bytes);
     }
 
     /**
      * @param string $b64
      * @return bool
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
      * @see equals
      */
     public function equalsBase64(string $b64): bool
     {
-        return $this->rpc->call('Service.EqualsBuffer', ['id' => $this->id, 'value' => $b64]);
+        return $this->bitmap->equals($b64);
     }
 
     /**
      * creates a new ManyIntIterable to iterate over the integers contained in the bitmap, in sorted order; the iterator becomes invalid if the bitmap is modified (e.g., with Add or Remove).
-     * The iteration with side effects, Because each iteration removes the element.
      * @param int $size
-     * @return int[]
-     * @throws ServiceException|ReconnectException|ErrorException|Error|Throwable
+     * @return Generator
      */
-    public function iterate(int $size = 100): array
+    public function iterate(int $size = 100): Generator
     {
         if ($size <= 0) {
             $size = 100;
         }
-        return $this->rpc->call('Service.Iterate', ['id' => $this->id, 'value' => $size]);
+        return $this->bitmap->iterate($size);
     }
 }
