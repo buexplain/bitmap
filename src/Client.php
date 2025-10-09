@@ -476,12 +476,11 @@ class Client
      */
     public function andAny(Client ...$clients)
     {
-        $total = new Bitmap();
+        $bitmaps = [];
         foreach ($clients as $client) {
-            $b = $this->bitmap->and($client->bitmap);
-            $total->orInPlace($b);
+            $bitmaps[] = $client->bitmap;
         }
-        $this->bitmap = $total;
+        $this->bitmap->andAnyInPlace(...$bitmaps);
     }
 
     /**
@@ -544,9 +543,7 @@ class Client
      */
     public function andNotAnyBuffer(string ...$bytes)
     {
-        foreach ($bytes as $v) {
-            $this->bitmap->andNotInPlace($v);
-        }
+        $this->bitmap->andNotAnyInPlace(...$bytes);
     }
 
     /**
@@ -593,9 +590,7 @@ class Client
      */
     public function orAnyBuffer(string ...$bytes)
     {
-        foreach ($bytes as $v) {
-            $this->bitmap->orInPlace($v);
-        }
+        $this->bitmap->orAnyInPlace(...$bytes);
     }
 
     /**
