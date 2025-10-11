@@ -480,7 +480,7 @@ class Client
         foreach ($clients as $client) {
             $bitmaps[] = $client->bitmap;
         }
-        $this->bitmap->andAnyInPlace(...$bitmaps);
+        $this->bitmap->unionAndManyInPlace(...$bitmaps);
     }
 
     /**
@@ -543,7 +543,7 @@ class Client
      */
     public function andNotAnyBuffer(string ...$bytes)
     {
-        $this->bitmap->andNotAnyInPlace(...$bytes);
+        $this->bitmap->iteratedAndNotManyInPlace(...$bytes);
     }
 
     /**
@@ -590,7 +590,7 @@ class Client
      */
     public function orAnyBuffer(string ...$bytes)
     {
-        $this->bitmap->orAnyInPlace(...$bytes);
+        $this->bitmap->orManyInPlace(...$bytes);
     }
 
     /**
