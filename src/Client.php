@@ -18,9 +18,13 @@ class Client
 {
     protected Bitmap $bitmap;
 
-    public function __construct()
+    public function __construct(Bitmap $bitmap = null)
     {
-        $this->bitmap = new Bitmap();
+        if (is_null($bitmap)) {
+            $this->bitmap = new Bitmap();
+        } else {
+            $this->bitmap = $bitmap;
+        }
     }
 
     /**
@@ -623,6 +627,9 @@ class Client
                 $result[$group]->orInPlace($v);
             }
             $this->bitmap->orInPlace($result[$group]);
+        }
+        foreach ($result as $group => $bitmap) {
+            $result[$group] = new self($bitmap);
         }
         return $result;
     }
